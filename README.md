@@ -17,6 +17,7 @@ git clone https://github.com/silbinarywolf/webpack-typescript.git
 cd webpack-typescript
 git submodule init
 git submodule update
+yarn install --offline
 ```
 
 ## Run

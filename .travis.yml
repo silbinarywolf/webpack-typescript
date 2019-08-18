@@ -9,4 +9,5 @@ install:
   - git submodule update
 
 script:
+  - yarn install --offline
   - yarn build

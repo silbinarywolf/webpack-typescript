@@ -10,6 +10,27 @@ I wanted to experiment with having all of the necessary dependencies alongside t
 * Node v10.16.0+
 * Yarn 1.17.3+
 
+## Install
+
+```
+git clone https://github.com/silbinarywolf/webpack-typescript.git
+cd webpack-typescript
+git submodule init
+git submodule update
+```
+
+## Run
+
+**Run dev. server:**
+```
+yarn start
+```
+
+**Build distributable:**
+```
+yarn build
+```
+
 ## Documentation
 
 * [License](LICENSE.md)

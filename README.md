@@ -8,7 +8,7 @@ I wanted to experiment with having all of the necessary dependencies alongside t
 ## Requirements
 
 * Node v10.16.0+
-* Yarn 1.17.3+
+* Yarn 1.15.0+
 
 ## Install
 

@@ -11,20 +11,46 @@ module.exports = {
 				test: /\.tsx?$/,
 				use: 'ts-loader',
 				exclude: /node_modules/
-			}
+			},
+			{
+				test: /\.css$/,
+				use: [
+					{
+						loader: require.resolve('css-modules-typescript-loader'),
+						options: {
+							mode: process.env.CI ? 'verify' : 'emit'
+						}
+					},
+					{
+						loader: require.resolve('css-loader'),
+						options: {
+							modules: true,
+						},
+					},
+					/*{
+						loader: require.resolve('postcss-loader')
+					}*/
+				],
+			},
 		]
 	},
 	resolve: {
 		extensions: [
 			'.tsx',
-			'.ts'
+			'.ts',
+			'.js',
 		],
 		plugins: [
 			new TsconfigPathsPlugin()
 		]
 	},
 	output: {
-		filename: 'bundle.js',
+		filename: 'bundle.min.js',
 		path: path.resolve(__dirname, 'dist')
+	},
+	devServer: {
+		contentBase: path.join(__dirname, 'dist'),
+		compress: true,
+		port: 9000,
 	}
 };

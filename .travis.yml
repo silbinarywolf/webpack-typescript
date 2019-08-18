@@ -1,0 +1,12 @@
+# Based off of https://github.com/cypress-io/cypress-example-todomvc/blob/master/.travis.yml
+language: node_js
+
+node_js:
+  - 10.16
+
+install:
+  - git submodule init
+  - git submodule update
+
+script:
+  - yarn build

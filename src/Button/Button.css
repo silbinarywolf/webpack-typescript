@@ -1,3 +1,5 @@
 .button {
-	background: blue;
+	color: #fff;
+	background: #333;
+	padding: 8px 16px;
 }

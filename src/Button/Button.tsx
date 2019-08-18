@@ -1,6 +1,7 @@
 import React from "react";
 
-import styles from "./Button.css";
+import ButtonResetStyle from "~/ButtonReset/ButtonReset.css";
+import ButtonStyle from "./Button.css";
 
 interface ButtonProps {
 	label: string;
@@ -13,9 +14,12 @@ export function Button(props: ButtonProps): JSX.Element {
 	return (
 		<button
 			type="button"
-			className={styles.button}
+			className={[
+				ButtonResetStyle.reset,
+				ButtonStyle.button,
+			].join(' ')}
 		>
-			${label}
+			{label}
 		</button>
 	)
 }

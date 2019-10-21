@@ -11,3 +11,4 @@ install:
 script:
   - yarn install --offline
   - yarn build
+  - yarn test

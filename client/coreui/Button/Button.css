@@ -1,0 +1,6 @@
+.button {
+	composes: reset from "~client/coreui/ButtonReset/ButtonReset.css";
+	color: #fff;
+	background: #333;
+	padding: 8px 16px;
+}

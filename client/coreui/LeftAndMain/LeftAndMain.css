@@ -1,0 +1,30 @@
+.layout {
+	margin-left: 160px;
+}
+
+.menuBack,
+.menu {
+	width: 160px;
+	background-color: #23282d;
+}
+
+.menuBack {
+	position: fixed;
+	top: 0;
+	bottom: -120px;
+	z-index: 0;
+}
+
+.menu {
+	position: fixed;
+	left: 0;
+	z-index: 1;
+}
+
+.menuList {
+	composes: reset from "~client/coreui/ListReset/ListReset.css";
+}
+
+.menuLink {
+	color: inherit;
+}

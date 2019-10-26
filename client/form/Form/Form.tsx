@@ -8,7 +8,7 @@ export interface FieldModel {
 	 * Registered name of the type, usually the class name
 	 * of the field
 	 */
-	type: string;
+	kind: string;
 	name: string,
 	label: string,
 }
@@ -21,8 +21,6 @@ export interface FormModel {
 export type FormRecord = {[fieldName: string]: string | number} | undefined;
 
 interface State {
-	// todo: Remove
-	error: string;
 }
 
 interface Props {
@@ -30,6 +28,7 @@ interface Props {
 	record: FormRecord;
 	error: string;
 	model: FormModel;
+	disabled?: boolean;
 	onUpdateRecord: (record: FormRecord) => void;
 	onSubmit: (actionName: string) => void;
 }
@@ -37,9 +36,7 @@ interface Props {
 export class Form extends React.Component<Props, State> {
 	constructor(props: Props) {
 		super(props);
-		this.state = {
-			error: '',
-		};
+		this.state = {};
 	}
 
 	onChangeField(name: string, value: string) {
@@ -65,13 +62,14 @@ export class Form extends React.Component<Props, State> {
 	renderFields = (): JSX.Element => {
 		const {
 			record,
-			model
+			model,
+			disabled,
 		} = this.props;
 		let fields: JSX.Element[] = [];
 		let namesTaken: {[name: string]: boolean} = {};
 		for (let field of model.fields) {
 			const {
-				type,
+				kind,
 				name,
 				label,
 			} = field;
@@ -86,7 +84,7 @@ export class Form extends React.Component<Props, State> {
 			// todo(Jake): 2019-10-26
 			// Use system to register new field types
 			// possibly lazy load
-			switch (field.type) {
+			switch (kind) {
 				case "TextField":
 					fields.push(
 						<TextField
@@ -94,13 +92,18 @@ export class Form extends React.Component<Props, State> {
 							name={name}
 							label={label}
 							value={value}
+							disabled={disabled}
 							onChange={(value) => this.onChangeField(name, value)}
 						/>
 					);
 				break;
 
+				case undefined:
+					throw new Error(`${name}: Field model "kind" is undefined.`);
+				break;
+
 				default:
-					throw new Error(`Field type "${type}" does not exist.`);
+					throw new Error(`${name}: Field model kind "${kind}" does not exist.`);
 				break;
 			}
 		}
@@ -109,14 +112,15 @@ export class Form extends React.Component<Props, State> {
 
 	renderActions = (): JSX.Element => {
 		const {
-			model
+			model,
+			disabled,
 		} = this.props;
 		let componentsToRender: JSX.Element[] = [];
 		let namesTaken: {[name: string]: boolean} = {};
 		for (let action of model.actions) {
 			const {
 				name,
-				type,
+				kind,
 				label,
 			} = action;
 			if (namesTaken[name] === true) {
@@ -126,20 +130,25 @@ export class Form extends React.Component<Props, State> {
 			// todo(Jake): 2019-10-26
 			// Use system to register new action types
 			// possibly lazy load
-			switch (type) {
+			switch (kind) {
 				case "Button":
 					componentsToRender.push(
 						<Button
 							key={name}
 							type="submit"
 							label={label}
+							disabled={disabled}
 							onClick={() => this.onSubmitButton(name)}
 						/>
 					);
 				break;
 
+				case undefined:
+					throw new Error(`${name}: Field model "kind" is undefined.`);
+				break;
+
 				default:
-					throw new Error(`Action type "${type}" does not exist.`);
+					throw new Error(`${name}: Field model kind "${kind}" does not exist.`);
 				break;
 			}
 		}
@@ -149,10 +158,8 @@ export class Form extends React.Component<Props, State> {
 	render(): JSX.Element {
 		const {
 			id,
-		} = this.props;
-		const {
 			error,
-		} = this.state;
+		} = this.props;
 		const errorId = id + '_error';
 		return (
 			<form

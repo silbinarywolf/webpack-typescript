@@ -11,6 +11,7 @@ interface Props {
 	name: string;
 	label: string;
 	value: string;
+	disabled?: boolean;
 	onChange: (value: string) => void;
 }
 
@@ -26,6 +27,7 @@ export class TextField extends React.Component<Props, State> {
 		const {
 			name,
 			label,
+			disabled,
 			value,
 		} = this.props;
 		const id = name;
@@ -40,6 +42,7 @@ export class TextField extends React.Component<Props, State> {
 					type="text"
 					className={styles.input}
 					value={value}
+					disabled={disabled}
 					onChange={this.onChange}
 				/>
 			</FieldHolder>

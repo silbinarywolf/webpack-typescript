@@ -5,39 +5,14 @@ import {
 	FormModel,
 	FormRecord,
 } from "client/form/Form/Form";
+import { Loading } from "client/coreui/Loading/Loading";
 import { Fetch } from "client/fetch/Fetch/Fetch";
-
-const formModel: FormModel = {
-	fields: [
-		{
-			type: "TextField",
-			name: "Title",
-			label: "Page Title",
-		},
-		{
-			type: "TextField",
-			name: "Content",
-			label: "Content",
-		},
-		{
-			type: "TextField",
-			name: "Name",
-			label: "Persons Name",
-		},
-	],
-	actions: [
-		{
-			type: "Button",
-			name: "Edit",
-			label: "Save",
-		}
-	]
-};
 
 interface State {
 	isSubmitting: boolean;
 	error: string;
 	record: FormRecord;
+	model: FormModel | undefined;
 }
 
 interface Props {
@@ -51,7 +26,12 @@ export default class EditPage extends React.Component<Props, State> {
 			isSubmitting: false,
 			error: '',
 			record: {},
+			model: undefined,
 		}
+	}
+
+	componentDidMount() {
+		this.getRecord();
 	}
 
 	onUpdateRecord = (record: FormRecord): void => {
@@ -75,6 +55,19 @@ export default class EditPage extends React.Component<Props, State> {
 			this.setState({
 				isSubmitting: false,
 			});
+		});
+	}
+
+	async getRecord() {
+		const id = 0;
+		let model: FormModel;
+		try {
+			model = await Fetch.getJSON<FormModel>("/api/Page/Get/" + String(id));
+		} catch (e) {
+			throw e;
+		}
+		this.setState({
+			model: model,
 		});
 	}
 
@@ -102,19 +95,32 @@ export default class EditPage extends React.Component<Props, State> {
 
 	render(): JSX.Element {
 		const {
+			model,
 			record,
 			error,
+			isSubmitting,
 		} = this.state;
 		return (
 			<React.Fragment>
-				<Form
-					id="EditPageForm"
-					record={record}
-					error={error}
-					model={formModel}
-					onUpdateRecord={this.onUpdateRecord}
-					onSubmit={this.onSubmit}
-				/>
+				{model === undefined &&
+					<Loading/>
+				}
+				{model !== undefined &&
+					<React.Fragment>
+						<Form
+							id="EditPageForm"
+							record={record}
+							error={error}
+							model={model}
+							onUpdateRecord={this.onUpdateRecord}
+							onSubmit={this.onSubmit}
+							disabled={isSubmitting}
+						/>
+						{isSubmitting &&
+							<p>Saving...</p>
+						}
+					</React.Fragment>
+				}
 			</React.Fragment>
 		)
 	}

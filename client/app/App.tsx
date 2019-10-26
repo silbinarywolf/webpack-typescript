@@ -21,7 +21,7 @@ import { Loading } from "client/coreui/Loading/Loading";
 const EditPage = React.lazy(() => import("client/coreui/EditPage/EditPage"));
 
 export function StartApp() {
-	Fetch.setBaseUrl('https://localhost:8080');
+	Fetch.setBaseUrl("http://localhost:8080");
 
 	ReactDOM.render(
 		<ErrorBoundary>

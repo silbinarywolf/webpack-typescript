@@ -1,17 +1,24 @@
 export namespace Fetch {
-	let baseUrl: string = '';
+	interface FetchState {
+		baseUrl: string;
+	}
+
+	const state: FetchState = {
+		baseUrl: "",
+	}
 
 	export function setBaseUrl(baseUrl: string) {
-		baseUrl = baseUrl;
+		state.baseUrl = baseUrl;
 	}
 
 	export async function postJSON<T>(uri: string, data: {[prop: string]: any} | undefined): Promise<T> {
 		if (data === undefined) {
 			throw new Error("postJSON: data cannot be undefined.");
 		}
+		const url = state.baseUrl + uri;
 		let response: Response;
 		try {
-			response = await fetch(baseUrl+uri, {
+			response = await fetch(url, {
 				headers: {
 					"Accept": "application/json",
 					"Content-Type": "application/json"

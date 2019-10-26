@@ -82,14 +82,22 @@ export default class EditPage extends React.Component<Props, State> {
 		if (actionName === '') {
 			throw new Error('Cannot submit with blank actionName.');
 		}
+		interface ModelResponse {
+			data: FormRecord;
+			errors: {[name: string]: string};
+		}
 		const id = 0;
-		let result = '';
+		let res: ModelResponse;
 		try {
-			result = await Fetch.postJSON<string>("/api/Page/" + actionName + "/" + String(id), this.state.record);
+			res = await Fetch.postJSON<ModelResponse>("/api/Page/" + actionName + "/" + String(id), this.state.record);
 		} catch (e) {
 			throw e;
 		}
-		console.log('saveRecord', result);
+		if (res.data !== undefined) {
+			this.setState({
+				record: res.data,
+			});
+		}
 	}
 
 	render(): JSX.Element {

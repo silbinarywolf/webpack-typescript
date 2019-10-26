@@ -2,7 +2,7 @@ import React from "react";
 
 import { FieldHolder } from "client/form/FieldHolder/FieldHolder.tsx";
 
-// import styles from "client/coreui/TextField/TextField.css";
+import styles from "client/form/TextField/TextField.css";
 
 interface State {
 }
@@ -19,9 +19,7 @@ export class TextField extends React.Component<Props, State> {
 		const {
 			onChange
 		} = this.props;
-		if (onChange) {
-			onChange(e.target.value);
-		}
+		onChange(e.target.value);
 	}
 
 	render(): JSX.Element {
@@ -40,6 +38,7 @@ export class TextField extends React.Component<Props, State> {
 					id={id}
 					name={name}
 					type="text"
+					className={styles.input}
 					value={value}
 					onChange={this.onChange}
 				/>

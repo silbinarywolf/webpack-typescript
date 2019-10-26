@@ -1,79 +1,112 @@
 import React from "react";
 
-import { TextField } from "client/form/TextField/TextField.tsx";
+import {
+	Form,
+	FormModel,
+	FormRecord,
+} from "client/form/Form/Form";
+import { Fetch } from "client/fetch/Fetch/Fetch";
 
-import styles from "client/coreui/EditPage/EditPage.css";
-
-const formSchema = {
-	form: {},
+const formModel: FormModel = {
 	fields: [
 		{
 			type: "TextField",
 			name: "Title",
 			label: "Page Title",
 		},
+		{
+			type: "TextField",
+			name: "Content",
+			label: "Content",
+		},
+		{
+			type: "TextField",
+			name: "Name",
+			label: "Persons Name",
+		},
 	],
+	actions: [
+		{
+			type: "Button",
+			name: "Edit",
+			label: "Save",
+		}
+	]
 };
 
 interface State {
-	record: {[fieldName: string]: string | number};
+	isSubmitting: boolean;
+	error: string;
+	record: FormRecord;
 }
 
 interface Props {
 }
 
 export default class EditPage extends React.Component<Props, State> {
-	state: State = {
-		record: {},
-	};
+	constructor(props: Props) {
+		super(props);
 
-	onChangeField(name: string, value: string) {
-		this.setState(prevState => ({
-		    record: {
-		        ...prevState.record,
-		        [name]: value
-		    }
-		}))
+		this.state = {
+			isSubmitting: false,
+			error: '',
+			record: {},
+		}
 	}
 
-	renderFields = (): JSX.Element => {
-		const {
-			record,
-		} = this.state;
-		let fields: JSX.Element[] = [];
-		for (let field of formSchema.fields) {
-			const {
-				name,
-				label,
-			} = field;
-			// todo(Jake): 2019-10-26
-			// Use system to register new field types
-			// possibly lazy load
-			switch (field.type) {
-				case "TextField":
-					let value = '';
-					if (record[name]) {
-						value = String(value);
-					}
-					fields.push(
-						<TextField
-							{...field}
-							value={value}
-							onChange={(value) => this.onChangeField(name, value)}
-						/>
-					);
-				break;
-			}
+	onUpdateRecord = (record: FormRecord): void => {
+		this.setState({
+			record: record,
+		})
+	}
+
+	onSubmit = (actionName: string): void => {
+		this.setState({
+			error: '',
+			isSubmitting: true,
+		})
+		this.saveRecord(actionName)
+		.catch((e) => {
+			this.setState({
+				error: String(e),
+			})
+		})
+		.finally(() => {
+			this.setState({
+				isSubmitting: false,
+			});
+		});
+	}
+
+	async saveRecord(actionName: string) {
+		if (actionName === '') {
+			throw new Error('Cannot submit with blank actionName.');
 		}
-		return <React.Fragment children={fields}/>;
+		const id = 0;
+		let result = '';
+		try {
+			result = await Fetch.postJSON<string>("/api/Page/" + actionName + "/" + String(id), this.state.record);
+		} catch (e) {
+			throw e;
+		}
+		console.log('saveRecord', result);
 	}
 
 	render(): JSX.Element {
+		const {
+			record,
+			error,
+		} = this.state;
 		return (
 			<React.Fragment>
-				<form>
-					{this.renderFields()}
-				</form>
+				<Form
+					id="EditPageForm"
+					record={record}
+					error={error}
+					model={formModel}
+					onUpdateRecord={this.onUpdateRecord}
+					onSubmit={this.onSubmit}
+				/>
 			</React.Fragment>
 		)
 	}

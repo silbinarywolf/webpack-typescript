@@ -30,7 +30,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 		if (error) {
 			return (
 				<React.Fragment>
-					<h2>Something went wrong.</h2>
+					<h1>Something went wrong.</h1>
 					<p>{String(error)}</p>
 				</React.Fragment>
 			);

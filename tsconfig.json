@@ -5,6 +5,11 @@
 			"client/*": ["client/*"]
 		},
 		"strict": true,
+		"noUnusedLocals": true,
+		"strictBindCallApply": true,
+		"strictFunctionTypes": true,
+		"strictPropertyInitialization": true,
+		"pretty": true,
 		"target": "es6",
 		"jsx": "react",
 		"sourceMap": true,

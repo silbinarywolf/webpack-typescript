@@ -3,8 +3,9 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+
+	"github.com/silbinarywolf/webpack-typescript/server/internal/schema"
 )
 
 var (
@@ -80,15 +81,26 @@ type RecordResponse struct {
 }
 
 func Start() {
-	b, err := ioutil.ReadFile("dist/index.html")
+	schema.LoadAll()
+	/*b, err := ioutil.ReadFile("dist/index.html")
 	if err != nil {
 		panic(err)
 	}
 	indexHtml = b
 	fs := http.FileServer(http.Dir("dist"))
-	http.Handle("/dist", fs)
-	http.HandleFunc("/api/Page/Get/", GetModelHandler)
-	http.HandleFunc("/api/Page/Edit/", EditModelHandler)
+	http.Handle("/dist", fs)*/
+	for _, model := range schema.Models() {
+		name := model.Name
+		panic("todo: Convert model to form schema and use it in GetModelHandler")
+		http.HandleFunc("/api/"+name+"/Get/", func(w http.ResponseWriter, r *http.Request) {
+			GetModelHandler(w, r, model)
+		})
+		http.HandleFunc("/api/"+name+"/Edit/", func(w http.ResponseWriter, r *http.Request) {
+			EditModelHandler(w, r, model)
+		})
+	}
+	//http.HandleFunc("/api/Page/Get/", GetModelHandler)
+	//http.HandleFunc("/api/Page/Edit/", EditModelHandler)
 	fmt.Printf("Starting server on :8080...\n")
 	http.ListenAndServe(":8080", nil)
 }
@@ -99,7 +111,7 @@ func handleCors(w *http.ResponseWriter, req *http.Request) {
 	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 }
 
-func GetModelHandler(w http.ResponseWriter, r *http.Request) {
+func GetModelHandler(w http.ResponseWriter, r *http.Request, model schema.Model) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -112,6 +124,7 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Please send a "+http.MethodGet+" request", 400)
 		return
 	}
+
 	res := formModel
 	jsonOutput, err := json.Marshal(&res)
 	if err != nil {
@@ -121,7 +134,7 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonOutput)
 }
 
-func EditModelHandler(w http.ResponseWriter, r *http.Request) {
+func EditModelHandler(w http.ResponseWriter, r *http.Request, model schema.Model) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return

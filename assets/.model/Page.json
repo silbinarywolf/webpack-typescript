@@ -1,0 +1,13 @@
+{
+	"Name": "Page",
+	"Fields": [
+		{
+			"Name": "Title",
+			"Kind": "String"
+		},
+		{
+			"Name": "Content",
+			"Kind": "String"
+		}
+	]
+}

@@ -1,13 +1,13 @@
 {
-	"Name": "Page",
-	"Fields": [
+	"name": "Page",
+	"fields": [
 		{
-			"Name": "Title",
-			"Kind": "String"
+			"name": "Title",
+			"type": "String"
 		},
 		{
-			"Name": "Content",
-			"Kind": "String"
+			"name": "Content",
+			"type": "String"
 		}
 	]
 }

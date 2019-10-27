@@ -2,8 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/silbinarywolf/webpack-typescript/server/internal/schema"
 )
@@ -12,67 +14,15 @@ var (
 	indexHtml []byte
 )
 
-var (
-	//formModelAsBytes []byte
-	formModel = FormModel{
-		Fields: []FieldModel{
-			{
-				Kind:  "TextField",
-				Name:  "Title",
-				Label: "Page Title",
-			},
-			{
-				Kind:  "TextField",
-				Name:  "Content",
-				Label: "Content",
-			},
-			{
-				Kind:  "TextField",
-				Name:  "Name",
-				Label: "First Name",
-			},
-			{
-				Kind:  "TextField",
-				Name:  "LastName",
-				Label: "Last Name",
-			},
-		},
-		Actions: []FieldModel{
-			{
-				Kind:  "Button",
-				Name:  "Edit",
-				Label: "Edit",
-			},
-		},
-	}
-)
-
-/*func init() {
-	var err error
-	formModelAsBytes, err = json.Marshal(&formModel)
-	if err != nil {
-		panic(err)
-	}
-}*/
-
-type Field struct {
-	key      string
-	typeName string
-}
-
-type Model struct {
-	fields []Field
-}
-
-type FieldModel struct {
-	Kind  string `json:"kind"`
-	Name  string `json:"name"`
-	Label string `json:"label"`
-}
-
 type FormModel struct {
 	Fields  []FieldModel `json:"fields"`
 	Actions []FieldModel `json:"actions"`
+}
+
+type FieldModel struct {
+	Type  string `json:"type"`
+	Name  string `json:"name"`
+	Label string `json:"label"`
 }
 
 type RecordResponse struct {
@@ -82,25 +32,28 @@ type RecordResponse struct {
 
 func Start() {
 	schema.LoadAll()
-	/*b, err := ioutil.ReadFile("dist/index.html")
-	if err != nil {
-		panic(err)
-	}
-	indexHtml = b
-	fs := http.FileServer(http.Dir("dist"))
-	http.Handle("/dist", fs)*/
-	for _, model := range schema.Models() {
-		name := model.Name
-		panic("todo: Convert model to form schema and use it in GetModelHandler")
+
+	// TODO(Jake): 2019-10-27
+	// Create system to watch files so that schema can be updated on the fly
+
+	dataModels := schema.DataModels()
+	for _, dataModel := range dataModels {
+		name := dataModel.Name
+		formModel, err := createFormModel(dataModel)
+		if err != nil {
+			// TODO(jake): 2019-10-27
+			// make this error message nicer
+			fmt.Printf("An error occurred building form model from data model: %s\n%s", name, err)
+			os.Exit(0)
+		}
+
 		http.HandleFunc("/api/"+name+"/Get/", func(w http.ResponseWriter, r *http.Request) {
-			GetModelHandler(w, r, model)
+			GetModelHandler(w, r, dataModel, formModel)
 		})
 		http.HandleFunc("/api/"+name+"/Edit/", func(w http.ResponseWriter, r *http.Request) {
-			EditModelHandler(w, r, model)
+			EditModelHandler(w, r, dataModel, formModel)
 		})
 	}
-	//http.HandleFunc("/api/Page/Get/", GetModelHandler)
-	//http.HandleFunc("/api/Page/Edit/", EditModelHandler)
 	fmt.Printf("Starting server on :8080...\n")
 	http.ListenAndServe(":8080", nil)
 }
@@ -111,7 +64,43 @@ func handleCors(w *http.ResponseWriter, req *http.Request) {
 	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 }
 
-func GetModelHandler(w http.ResponseWriter, r *http.Request, model schema.Model) {
+func createFormModel(dataModel schema.DataModel) (FormModel, error) {
+	var invalidFields []schema.DataModelField
+	var res FormModel
+	for _, field := range dataModel.Fields {
+		switch field.Type {
+		case "String":
+			res.Fields = append(res.Fields, FieldModel{
+				Type:  "TextField",
+				Name:  field.Name,
+				Label: field.Name,
+			})
+		default:
+			invalidFields = append(invalidFields, field)
+		}
+	}
+	if len(res.Actions) == 0 {
+		res.Actions = append(res.Actions, FieldModel{
+			Type:  "Button",
+			Name:  "Edit",
+			Label: "Save",
+		})
+	}
+	if len(invalidFields) > 0 {
+		errorMessage := "The following fields have an invalid type:\n"
+		for _, field := range invalidFields {
+			errorMessage += "- " + field.Name + ": \"" + field.Type + "\"\n"
+		}
+		// todo(Jake): 2019-10-27
+		// Have system to register types and just print all available here
+		errorMessage += "\nThe field types that are available are:\n"
+		errorMessage += "- String"
+		return FormModel{}, errors.New(errorMessage)
+	}
+	return res, nil
+}
+
+func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.DataModel, formModel FormModel) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -124,9 +113,7 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, model schema.Model)
 		http.Error(w, "Please send a "+http.MethodGet+" request", 400)
 		return
 	}
-
-	res := formModel
-	jsonOutput, err := json.Marshal(&res)
+	jsonOutput, err := json.Marshal(&formModel)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
@@ -134,7 +121,7 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, model schema.Model)
 	w.Write(jsonOutput)
 }
 
-func EditModelHandler(w http.ResponseWriter, r *http.Request, model schema.Model) {
+func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.DataModel, formModel FormModel) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -147,11 +134,28 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, model schema.Model
 		http.Error(w, "Please send a "+http.MethodPost+" request", 400)
 		return
 	}
-	m := make(map[string]interface{})
-	err := json.NewDecoder(r.Body).Decode(&m)
+	record := make(map[string]interface{})
+	err := json.NewDecoder(r.Body).Decode(&record)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
+	}
+	// Validate data against schema
+	{
+		var invalidFields []string
+		for name, _ := range record {
+			if !dataModel.HasFieldByName(name) {
+				invalidFields = append(invalidFields, name)
+				continue
+			}
+		}
+		if len(invalidFields) > 0 {
+			fieldStr := ""
+			for _, name := range invalidFields {
+				fieldStr += "- " + name + "\n"
+			}
+			http.Error(w, "Fields do not exist on \""+dataModel.Name+"\":\n"+fieldStr, 400)
+		}
 	}
 	res := RecordResponse{}
 	res.Data = make(map[string]interface{})

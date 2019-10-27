@@ -2,24 +2,26 @@ package schema
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
 var (
-	modelMap  = make(map[string]*Model)
-	modelList []Model
+	modelMap  = make(map[string]*DataModel)
+	modelList []DataModel
 )
 
-type ModelField struct {
-	Name string `json:"Name"`
-	Kind string `json:"Kind"`
+type DataModelField struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
 }
 
-type Model struct {
-	Name   string       `json:"Name"`
-	Fields []ModelField `json:"Fields"`
+type DataModel struct {
+	Name     string           `json:"name"`
+	Fields   []DataModelField `json:"fields"`
+	fieldMap map[string]*DataModelField
 }
 
 func LoadAll() {
@@ -37,7 +39,7 @@ func LoadAll() {
 		panic("No schema files found")
 	}
 	for _, path := range fileList {
-		model, err := decodeModel(path)
+		model, err := decodeAndValidateModel(path)
 		if err != nil {
 			panic(err)
 		}
@@ -51,20 +53,49 @@ func LoadAll() {
 	}
 }
 
-func Models() []Model {
+func DataModels() []DataModel {
 	return modelList
 }
 
-func decodeModel(path string) (Model, error) {
+func (model *DataModel) FieldByName(name string) (*DataModelField, bool) {
+	r, ok := model.fieldMap[name]
+	return r, ok
+}
+
+func (model *DataModel) HasFieldByName(name string) bool {
+	_, ok := model.fieldMap[name]
+	return ok
+}
+
+func decodeAndValidateModel(path string) (DataModel, error) {
+	var model DataModel
 	file, err := os.Open(path)
 	defer file.Close()
 	if err != nil {
-		return Model{}, err
+		return model, err
 	}
-	var m Model
+	// NOTE(Jake): 2019-10-27
+	// Look into finding something that can:
+	// - Parse JSON with comments
+	// - Allow trailing commas.
+	// Since these are config files, it'd be nice
+	// if people can note down things in them and make
+	// rapid changes.
 	parser := json.NewDecoder(file)
-	if err := parser.Decode(&m); err != nil {
-		return Model{}, err
+	if err := parser.Decode(&model); err != nil {
+		return model, err
 	}
-	return m, nil
+	// Validate that there are no duplicates
+	{
+		fieldMap := make(map[string]*DataModelField)
+		for i := 0; i < len(model.Fields); i++ {
+			field := &model.Fields[i]
+			if _, ok := fieldMap[field.Name]; ok {
+				return model, errors.New(model.Name + ": cannot define field on model twice.")
+			}
+			fieldMap[field.Name] = field
+		}
+		model.fieldMap = fieldMap
+	}
+	return model, nil
 }

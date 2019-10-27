@@ -59,12 +59,18 @@ export default class EditPage extends React.Component<Props, State> {
 	}
 
 	async getRecord() {
+		this.setState({
+			error: '',
+		})
 		const id = 0;
 		let model: FormModel;
 		try {
 			model = await Fetch.getJSON<FormModel>("/api/Page/Get/" + String(id));
 		} catch (e) {
-			throw e;
+			this.setState({
+				error: String(e),
+			});
+			return;
 		}
 		this.setState({
 			model: model,
@@ -103,7 +109,14 @@ export default class EditPage extends React.Component<Props, State> {
 		return (
 			<React.Fragment>
 				{model === undefined &&
-					<Loading/>
+					<React.Fragment>
+						{error !== "" &&
+							<pre>{error}</pre>
+						}
+						{error === "" &&
+							<Loading/>
+						}
+					</React.Fragment>
 				}
 				{model !== undefined &&
 					<React.Fragment>

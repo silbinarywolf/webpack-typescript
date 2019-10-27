@@ -8,7 +8,7 @@ export interface FieldModel {
 	 * Registered name of the type, usually the class name
 	 * of the field
 	 */
-	kind: string;
+	type: string;
 	name: string,
 	label: string,
 }
@@ -69,7 +69,7 @@ export class Form extends React.Component<Props, State> {
 		let namesTaken: {[name: string]: boolean} = {};
 		for (let field of model.fields) {
 			const {
-				kind,
+				type,
 				name,
 				label,
 			} = field;
@@ -84,7 +84,7 @@ export class Form extends React.Component<Props, State> {
 			// todo(Jake): 2019-10-26
 			// Use system to register new field types
 			// possibly lazy load
-			switch (kind) {
+			switch (type) {
 				case "TextField":
 					fields.push(
 						<TextField
@@ -99,11 +99,11 @@ export class Form extends React.Component<Props, State> {
 				break;
 
 				case undefined:
-					throw new Error(`${name}: Field model "kind" is undefined.`);
+					throw new Error(`${name}: Field model "type" property is missing.`);
 				break;
 
 				default:
-					throw new Error(`${name}: Field model kind "${kind}" does not exist.`);
+					throw new Error(`${name}: Field model type "${type}" does not exist.`);
 				break;
 			}
 		}
@@ -120,7 +120,7 @@ export class Form extends React.Component<Props, State> {
 		for (let action of model.actions) {
 			const {
 				name,
-				kind,
+				type,
 				label,
 			} = action;
 			if (namesTaken[name] === true) {
@@ -130,7 +130,7 @@ export class Form extends React.Component<Props, State> {
 			// todo(Jake): 2019-10-26
 			// Use system to register new action types
 			// possibly lazy load
-			switch (kind) {
+			switch (type) {
 				case "Button":
 					componentsToRender.push(
 						<Button
@@ -144,11 +144,11 @@ export class Form extends React.Component<Props, State> {
 				break;
 
 				case undefined:
-					throw new Error(`${name}: Field model "kind" is undefined.`);
+					throw new Error(`${name}: Field model "type" property is missing.`);
 				break;
 
 				default:
-					throw new Error(`${name}: Field model kind "${kind}" does not exist.`);
+					throw new Error(`${name}: Field model type "${type}" does not exist.`);
 				break;
 			}
 		}

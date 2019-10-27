@@ -22,12 +22,16 @@ export namespace Fetch {
 			    },
 			    method: "GET",
 			});
-			if (!response.ok) {
-		        throw Error(String(response.status) + " " + response.statusText);
-		    }
 		} catch (e) {
 			throw e;
 		}
+		if (!response.ok) {
+			const body: string = await response.text();
+			if (body) {
+				throw new Error(body);
+			}
+	        throw new Error(String(response.status) + " " + response.statusText);
+	    }
 		let content: T;
 		try {
 			content = await response.json();
@@ -52,12 +56,16 @@ export namespace Fetch {
 			    method: "POST",
 			    body: JSON.stringify(data),
 			});
-			if (!response.ok) {
-		        throw Error(String(response.status) + " " + response.statusText);
-		    }
 		} catch (e) {
 			throw e;
 		}
+		if (!response.ok) {
+			const body: string = await response.text();
+			if (body) {
+				throw new Error(body);
+			}
+	        throw new Error(String(response.status) + " " + response.statusText);
+	    }
 		let content: T;
 		try {
 			content = await response.json();

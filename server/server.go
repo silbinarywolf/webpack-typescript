@@ -25,7 +25,12 @@ type FieldModel struct {
 	Label string `json:"label"`
 }
 
-type RecordResponse struct {
+type RecordGetResponse struct {
+	FormModel FormModel              `json:"formModel"`
+	Data      map[string]interface{} `json:"data"`
+}
+
+type RecordSaveResponse struct {
 	Data   map[string]interface{} `json:"data"`
 	Errors map[string]string      `json:"errors"`
 }
@@ -64,27 +69,18 @@ func handleCors(w *http.ResponseWriter, req *http.Request) {
 	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 }
 
-func createFormModel(dataModel schema.DataModel) (FormModel, error) {
-	var invalidFields []schema.DataModelField
-	var res FormModel
+func createNewRecord(dataModel schema.DataModel) (map[string]interface{}, error) {
+	var invalidFields []*schema.DataModelField
+	data := make(map[string]interface{})
 	for _, field := range dataModel.Fields {
 		switch field.Type {
 		case "String":
-			res.Fields = append(res.Fields, FieldModel{
-				Type:  "TextField",
-				Name:  field.Name,
-				Label: field.Name,
-			})
+			data[field.Name] = ""
+		case "Int64":
+			data[field.Name] = ""
 		default:
 			invalidFields = append(invalidFields, field)
 		}
-	}
-	if len(res.Actions) == 0 {
-		res.Actions = append(res.Actions, FieldModel{
-			Type:  "Button",
-			Name:  "Edit",
-			Label: "Save",
-		})
 	}
 	if len(invalidFields) > 0 {
 		errorMessage := "The following fields have an invalid type:\n"
@@ -95,7 +91,50 @@ func createFormModel(dataModel schema.DataModel) (FormModel, error) {
 		// Have system to register types and just print all available here
 		errorMessage += "\nThe field types that are available are:\n"
 		errorMessage += "- String"
+		errorMessage += "- Int64"
+		return nil, errors.New(errorMessage)
+	}
+	return data, nil
+}
+
+func createFormModel(dataModel schema.DataModel) (FormModel, error) {
+	var res FormModel
+	var invalidFields []*schema.DataModelField
+	for _, field := range dataModel.Fields {
+		switch field.Type {
+		case "String":
+			res.Fields = append(res.Fields, FieldModel{
+				Type:  "TextField",
+				Name:  field.Name,
+				Label: field.Name,
+			})
+		case "Int64":
+			res.Fields = append(res.Fields, FieldModel{
+				Type: "HiddenField",
+				Name: field.Name,
+			})
+		default:
+			invalidFields = append(invalidFields, field)
+		}
+	}
+	if len(invalidFields) > 0 {
+		errorMessage := "The following fields have an invalid type:\n"
+		for _, field := range invalidFields {
+			errorMessage += "- " + field.Name + ": \"" + field.Type + "\"\n"
+		}
+		// todo(Jake): 2019-10-27
+		// Have system to register types and just print all available here
+		errorMessage += "\nThe field types that are available are:\n"
+		errorMessage += "- String"
+		errorMessage += "- Int64"
 		return FormModel{}, errors.New(errorMessage)
+	}
+	if len(res.Actions) == 0 {
+		res.Actions = append(res.Actions, FieldModel{
+			Type:  "Button",
+			Name:  "Edit",
+			Label: "Save",
+		})
 	}
 	return res, nil
 }
@@ -113,7 +152,10 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.Da
 		http.Error(w, "Please send a "+http.MethodGet+" request", 400)
 		return
 	}
-	jsonOutput, err := json.Marshal(&formModel)
+	res := RecordGetResponse{}
+	res.FormModel = formModel
+	res.Data = dataModel.NewRecord()
+	jsonOutput, err := json.Marshal(&res)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
@@ -155,11 +197,13 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 				fieldStr += "- " + name + "\n"
 			}
 			http.Error(w, "Fields do not exist on \""+dataModel.Name+"\":\n"+fieldStr, 400)
+			return
 		}
 	}
-	res := RecordResponse{}
-	res.Data = make(map[string]interface{})
-	res.Data["Title"] = "New value"
+	res := RecordSaveResponse{}
+	res.Data = record
+	res.Data["ID"] = 1
+	res.Data["Title"] = "Hey"
 	res.Errors = make(map[string]string)
 	jsonOutput, err := json.Marshal(&res)
 	if err != nil {

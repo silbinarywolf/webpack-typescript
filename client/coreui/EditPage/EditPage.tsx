@@ -8,9 +8,19 @@ import {
 import { Loading } from "client/coreui/Loading/Loading";
 import { Fetch } from "client/fetch/Fetch/Fetch";
 
+interface RecordGetResponse {
+	formModel: FormModel
+	data: FormRecord
+}
+
 interface State {
 	isSubmitting: boolean;
 	error: string;
+	/**
+	 * loadedRecord is the record when it's state
+	 * was loaded from the API endpoint.
+	 */
+	loadedRecord: FormRecord;
 	record: FormRecord;
 	model: FormModel | undefined;
 }
@@ -25,7 +35,8 @@ export default class EditPage extends React.Component<Props, State> {
 		this.state = {
 			isSubmitting: false,
 			error: '',
-			record: {},
+			loadedRecord: undefined,
+			record: undefined,
 			model: undefined,
 		}
 	}
@@ -63,9 +74,9 @@ export default class EditPage extends React.Component<Props, State> {
 			error: '',
 		})
 		const id = 0;
-		let model: FormModel;
+		let response: RecordGetResponse;
 		try {
-			model = await Fetch.getJSON<FormModel>("/api/Page/Get/" + String(id));
+			response = await Fetch.getJSON("/api/Page/Get/" + String(id));
 		} catch (e) {
 			this.setState({
 				error: String(e),
@@ -73,7 +84,9 @@ export default class EditPage extends React.Component<Props, State> {
 			return;
 		}
 		this.setState({
-			model: model,
+			model: response.formModel,
+			loadedRecord: response.data,
+			record: response.data,
 		});
 	}
 

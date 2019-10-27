@@ -1,6 +1,7 @@
 import React from "react";
 
 import { TextField } from "client/form/TextField/TextField";
+import { HiddenField } from "client/form/HiddenField/HiddenField";
 import { Button } from "client/form/Button/Button";
 
 export interface FieldModel {
@@ -94,6 +95,16 @@ export class Form extends React.Component<Props, State> {
 							value={value}
 							disabled={disabled}
 							onChange={(value) => this.onChangeField(name, value)}
+						/>
+					);
+				break;
+
+				case "HiddenField":
+					fields.push(
+						<HiddenField
+							key={name}
+							name={name}
+							value={value}
 						/>
 					);
 				break;

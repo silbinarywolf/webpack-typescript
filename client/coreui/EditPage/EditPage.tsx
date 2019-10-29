@@ -1,5 +1,5 @@
 import React from "react";
-import { useHistory } from "react-router-dom";
+import { RouterProps } from "react-router";
 
 import {
 	Form,
@@ -27,12 +27,14 @@ interface State {
 	goToRoute: string;
 }
 
-interface Props {
+interface Props extends RouterProps {
 }
 
 export default class EditPage extends React.Component<Props, State> {
 	constructor(props: Props) {
 		super(props);
+
+		console.warn(props);
 
 		this.state = {
 			isSubmitting: false,
@@ -61,11 +63,10 @@ export default class EditPage extends React.Component<Props, State> {
 		})
 		this.saveRecord(actionName)
 		.then((record) => {
-			if (record) {
-				this.setState({
-					goToRoute: "/edit/Page/" + record["ID"],
-				})
+			if (!record) {
+				return;
 			}
+			this.props.history.push("/edit/Page/"  + record["ID"]);
 		})
 		.catch((e) => {
 			this.setState({
@@ -132,10 +133,6 @@ export default class EditPage extends React.Component<Props, State> {
 			error,
 			isSubmitting,
 		} = this.state;
-		if (this.state.goToRoute) {
-			let history = useHistory();
-			history.push(this.state.goToRoute);
-		}
 		return (
 			<React.Fragment>
 				{model === undefined &&

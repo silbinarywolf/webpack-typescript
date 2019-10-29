@@ -143,7 +143,7 @@ func createFormModel(dataModel schema.DataModel) (FormModel, error) {
 	return res, nil
 }
 
-func getId(path string) int64 {
+func parseId(path string) int64 {
 	v := strings.Split(path, "/")
 	if len(v) > 1 {
 		if i, err := strconv.ParseInt(v[1], 10, 64); err == nil {
@@ -216,26 +216,45 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 			return
 		}
 	}
-	// Get next ID
-	newID := getId(r.URL.Path)
-	{
-		err = filepath.Walk("assets/.db/"+dataModel.Name, func(path string, f os.FileInfo, err error) error {
-			if filepath.Ext(path) == ".json" {
-				idString := filepath.Base(path)
-				idString = strings.TrimSuffix(idString, filepath.Ext(idString))
-				id, err := strconv.ParseInt(idString, 10, 64)
-				if err != nil {
-					return err
+
+	// Get save directory
+	dir := "assets/.db/"+dataModel.Name;
+	_, err = os.Stat(dir);
+	dirExists := !os.IsNotExist(err)
+
+	// Parse ID
+	newID := parseId(r.URL.Path)
+	if newID <= -1 {
+		http.Error(w, "Invalid ID, cannot be a negative number", 400)
+		return
+	}
+	if newID == 0 {
+		// Get new ID
+		// Consider using this instead:
+		// - https://github.com/sony/sonyflake
+		if dirExists {
+			err = filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+				if filepath.Ext(path) == ".json" {
+					idString := filepath.Base(path)
+					idString = strings.TrimSuffix(idString, filepath.Ext(idString))
+					id, err := strconv.ParseInt(idString, 10, 64)
+					if err != nil {
+						return err
+					}
+					if newID <= id {
+						newID = id + 1
+					}
 				}
-				if newID <= id {
-					newID = id + 1
-				}
+				return err
+			})
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
 			}
-			return err
-		})
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
+		} 
+		if newID == 0 {
+			// If first record
+			newID = 1
 		}
 	}
 
@@ -244,6 +263,9 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 	res.Data["ID"] = newID
 	res.Errors = make(map[string]string)
 	{
+		if (!dirExists) {
+			os.MkdirAll(dir, 0700)
+		}
 		// Write file
 		file, _ := json.MarshalIndent(res.Data, "", "	")
 		idString := strconv.FormatInt(newID, 16)

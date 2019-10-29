@@ -21,27 +21,19 @@ export interface FormModel {
 
 export type FormRecord = {[fieldName: string]: string | number} | undefined;
 
-interface State {
-}
-
 interface Props {
 	id: string;
 	record: FormRecord;
 	error: string;
 	model: FormModel;
 	disabled?: boolean;
-	onUpdateRecord: (record: FormRecord) => void;
+	onRecordChange: (record: FormRecord) => void;
 	onSubmit: (actionName: string) => void;
 }
 
-export class Form extends React.Component<Props, State> {
-	constructor(props: Props) {
-		super(props);
-		this.state = {};
-	}
-
-	onChangeField(name: string, value: string) {
-		let record = this.props.record;
+export function Form(props: Props): JSX.Element {
+	const onChangeField = (name: string, value: string): void => {
+		let record = props.record;
 		if (record === undefined) {
 			return;
 		}
@@ -53,19 +45,19 @@ export class Form extends React.Component<Props, State> {
 			...record,
 			[name]: value,
 		}
-		this.props.onUpdateRecord(newRecord)
+		props.onRecordChange(newRecord)
 	}
 
-	onSubmitButton = (actionName: string): void => {
-		this.props.onSubmit(actionName)
+	const onSubmitButton = (actionName: string): void => {
+		props.onSubmit(actionName)
 	}
 
-	renderFields = (): JSX.Element => {
+	const renderFields = (): JSX.Element => {
 		const {
 			record,
 			model,
 			disabled,
-		} = this.props;
+		} = props;
 		let fields: JSX.Element[] = [];
 		let namesTaken: {[name: string]: boolean} = {};
 		for (let field of model.fields) {
@@ -94,7 +86,7 @@ export class Form extends React.Component<Props, State> {
 							label={label}
 							value={value}
 							disabled={disabled}
-							onChange={(value) => this.onChangeField(name, value)}
+							onChange={(value) => onChangeField(name, value)}
 						/>
 					);
 				break;
@@ -121,11 +113,11 @@ export class Form extends React.Component<Props, State> {
 		return <React.Fragment children={fields}/>;
 	}
 
-	renderActions = (): JSX.Element => {
+	const renderActions = (): JSX.Element => {
 		const {
 			model,
 			disabled,
-		} = this.props;
+		} = props;
 		let componentsToRender: JSX.Element[] = [];
 		let namesTaken: {[name: string]: boolean} = {};
 		for (let action of model.actions) {
@@ -149,7 +141,7 @@ export class Form extends React.Component<Props, State> {
 							type="submit"
 							label={label}
 							disabled={disabled}
-							onClick={() => this.onSubmitButton(name)}
+							onClick={() => onSubmitButton(name)}
 						/>
 					);
 				break;
@@ -166,29 +158,27 @@ export class Form extends React.Component<Props, State> {
 		return <React.Fragment children={componentsToRender}/>;
 	}
 
-	render(): JSX.Element {
-		const {
-			id,
-			error,
-		} = this.props;
-		const errorId = id + '_error';
-		return (
-			<form
-				id={id}
-				aria-describedby={errorId}
-			>
-				{error !== "" &&
-					<p id={errorId}>
-						{error}
-					</p>
-				}
-				<React.Fragment>
-					{this.renderFields()}
-				</React.Fragment>
-				<React.Fragment>
-					{this.renderActions()}
-				</React.Fragment>
-			</form>
-		)
-	}
+	const {
+		id,
+		error,
+	} = props;
+	const errorId = id + '_error';
+	return (
+		<form
+			id={id}
+			aria-describedby={errorId}
+		>
+			{error !== "" &&
+				<p id={errorId}>
+					{error}
+				</p>
+			}
+			<React.Fragment>
+				{renderFields()}
+			</React.Fragment>
+			<React.Fragment>
+				{renderActions()}
+			</React.Fragment>
+		</form>
+	)
 }

@@ -1,4 +1,5 @@
 import React from "react";
+import { useHistory } from "react-router-dom";
 
 import {
 	Form,
@@ -23,6 +24,7 @@ interface State {
 	loadedRecord: FormRecord;
 	record: FormRecord;
 	model: FormModel | undefined;
+	goToRoute: string;
 }
 
 interface Props {
@@ -38,6 +40,7 @@ export default class EditPage extends React.Component<Props, State> {
 			loadedRecord: undefined,
 			record: undefined,
 			model: undefined,
+			goToRoute: '',
 		}
 	}
 
@@ -45,18 +48,25 @@ export default class EditPage extends React.Component<Props, State> {
 		this.getRecord();
 	}
 
-	onUpdateRecord = (record: FormRecord): void => {
+	readonly onRecordChange = (record: FormRecord): void => {
 		this.setState({
 			record: record,
 		})
 	}
 
-	onSubmit = (actionName: string): void => {
+	readonly onSubmit = (actionName: string): void => {
 		this.setState({
 			error: '',
 			isSubmitting: true,
 		})
 		this.saveRecord(actionName)
+		.then((record) => {
+			if (record) {
+				this.setState({
+					goToRoute: "/edit/Page/" + record["ID"],
+				})
+			}
+		})
 		.catch((e) => {
 			this.setState({
 				error: String(e),
@@ -69,7 +79,7 @@ export default class EditPage extends React.Component<Props, State> {
 		});
 	}
 
-	async getRecord() {
+	async getRecord(): Promise<FormRecord> {
 		this.setState({
 			error: '',
 		})
@@ -88,9 +98,10 @@ export default class EditPage extends React.Component<Props, State> {
 			loadedRecord: response.data,
 			record: response.data,
 		});
+		return response.data;
 	}
 
-	async saveRecord(actionName: string) {
+	async saveRecord(actionName: string): Promise<FormRecord> {
 		if (actionName === '') {
 			throw new Error('Cannot submit with blank actionName.');
 		}
@@ -105,11 +116,13 @@ export default class EditPage extends React.Component<Props, State> {
 		} catch (e) {
 			throw e;
 		}
-		if (res.data !== undefined) {
-			this.setState({
-				record: res.data,
-			});
+		if (res.data === undefined) {
+			throw new Error('Unexpected from server, undefined value.');
 		}
+		this.setState({
+			record: res.data,
+		});
+		return res.data;
 	}
 
 	render(): JSX.Element {
@@ -119,6 +132,10 @@ export default class EditPage extends React.Component<Props, State> {
 			error,
 			isSubmitting,
 		} = this.state;
+		if (this.state.goToRoute) {
+			let history = useHistory();
+			history.push(this.state.goToRoute);
+		}
 		return (
 			<React.Fragment>
 				{model === undefined &&
@@ -138,7 +155,7 @@ export default class EditPage extends React.Component<Props, State> {
 							record={record}
 							error={error}
 							model={model}
-							onUpdateRecord={this.onUpdateRecord}
+							onRecordChange={this.onRecordChange}
 							onSubmit={this.onSubmit}
 							disabled={isSubmitting}
 						/>

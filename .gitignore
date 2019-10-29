@@ -3,3 +3,5 @@
 /webpack-typescript.exe
 /webpack-typescript
 /*.txt
+/.pnp.js
+/.pnp

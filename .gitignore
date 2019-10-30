@@ -1,2 +1,8 @@
 /dist
 /node_modules
+/webpack-typescript.exe
+/webpack-typescript
+/*.txt
+/.pnp.js
+/.pnp
+/assets

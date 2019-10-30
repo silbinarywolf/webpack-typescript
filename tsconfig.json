@@ -1,17 +1,22 @@
 {
 	"compilerOptions": {
-		"baseUrl": "./src",
+		"baseUrl": ".",
 		"paths": {
-			"~*": ["./*"]
+			"client/*": ["client/*"]
 		},
 		"strict": true,
+		"noUnusedLocals": true,
+		"strictBindCallApply": true,
+		"strictFunctionTypes": true,
+		"strictPropertyInitialization": true,
+		"pretty": true,
 		"target": "es6",
 		"jsx": "react",
 		"sourceMap": true,
-		"module": "es2015",
+		"module": "esnext",
 		"moduleResolution": "node",
+		"strictNullChecks": true,
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true
-	},
-	"include": ["src/**/*"]
+	}
 }

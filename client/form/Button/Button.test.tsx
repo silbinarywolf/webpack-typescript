@@ -5,7 +5,12 @@ import renderer from 'react-test-renderer';
 
 test('Link changes the class when hovered', () => {
 	const component = renderer.create(
-		<Button label="Click"/>,
+		<Button
+			label="Click"
+			onClick={() => {
+				// no-op
+			}}
+		/>,
 	);
 	let tree = component.toJSON();
 	expect(tree).toMatchSnapshot();

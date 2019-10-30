@@ -24,7 +24,7 @@ module.exports = {
 						options: {
 							// you can specify a publicPath here
 							// by default it uses publicPath in webpackOptions.output
-							//publicPath: "../",
+							//publicPath: "/",
 							hmr: process.env.NODE_ENV === "development",
 						},
 					},
@@ -73,18 +73,16 @@ module.exports = {
 			chunkFilename: process.env.NODE_ENV !== "production" ? "[id].css" : "[id].[hash].css",
 		}),
 		new HtmlWebpackPlugin({
-			template: "./client/app/index.html",
-			/*hash: true,
-			title: "My App",
-			myPageHeader: "Hello World",
-			template: "./src/index.html",
-			filename:  "./index.html",*/
-			//filename:  "./dist/index.html",
+			template: "client/app/index.html",
 		}),
 	],
 	output: {
 		filename: "bundle.min.js",
-		path: path.resolve(__dirname, "dist")
+		path: path.resolve(__dirname, "dist"),
+		// NOTE(Jake): 2019-10-30
+		// Need this or React Router falls over on sub-urls.
+		// See: https://github.com/jantimon/html-webpack-plugin/issues/156
+		publicPath: "/",
 	},
 	devServer: {
 		contentBase: path.join(__dirname, "dist"),

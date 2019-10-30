@@ -1,5 +1,5 @@
 import React from "react";
-import { RouterProps } from "react-router";
+import { RouteComponentProps } from "react-router";
 
 import {
 	Form,
@@ -8,6 +8,8 @@ import {
 } from "client/form/Form/Form";
 import { Loading } from "client/coreui/Loading/Loading";
 import { Fetch } from "client/fetch/Fetch/Fetch";
+import { EditPagePath } from "client/editrecord/EditPage/register";
+import { generateURL } from "client/router/RouterController/RouterController";
 
 interface RecordGetResponse {
 	formModel: FormModel
@@ -17,7 +19,7 @@ interface RecordGetResponse {
 interface State {
 	isSubmitting: boolean;
 	error: string;
-	/**
+	/**generateURL
 	 * loadedRecord is the record when it's state
 	 * was loaded from the API endpoint.
 	 */
@@ -27,14 +29,17 @@ interface State {
 	goToRoute: string;
 }
 
-interface Props extends RouterProps {
+interface Params {
+	model: string;
+	id: string;
+}
+
+interface Props extends RouteComponentProps<Params> {
 }
 
 export default class EditPage extends React.Component<Props, State> {
 	constructor(props: Props) {
 		super(props);
-
-		console.warn(props);
 
 		this.state = {
 			isSubmitting: false,
@@ -48,6 +53,10 @@ export default class EditPage extends React.Component<Props, State> {
 
 	componentDidMount() {
 		this.getRecord();
+	}
+
+	componentDidUpdate(prevProps: Props, prevState: State, snapshot: any) {
+		throw new Error('Need to force state to reset for case where you navigate to /add/Page')
 	}
 
 	readonly onRecordChange = (record: FormRecord): void => {
@@ -66,18 +75,25 @@ export default class EditPage extends React.Component<Props, State> {
 			if (!record) {
 				return;
 			}
-			this.props.history.push("/edit/Page/"  + record["ID"]);
+			const isNewRecord = this.state.record ? this.state.record["ID"] === 0 : false;
+			console.warn(this.state.record, this.state.record ? this.state.record["ID"] : undefined);
+			this.setState({
+				isSubmitting: false,
+				record: record,
+			})
+			if (isNewRecord) {
+				this.props.history.push(generateURL(EditPagePath, {
+					id: record["ID"],
+					model: this.props.match.params.model,
+				}));
+			}
 		})
 		.catch((e) => {
 			this.setState({
+				isSubmitting: false,
 				error: String(e),
 			})
 		})
-		.finally(() => {
-			this.setState({
-				isSubmitting: false,
-			});
-		});
 	}
 
 	async getRecord(): Promise<FormRecord> {
@@ -115,10 +131,14 @@ export default class EditPage extends React.Component<Props, State> {
 		const id = 0;
 		let res: ModelResponse;
 		try {
-			res = await Fetch.postJSON<ModelResponse>("/api/Page/:actionName/:id", {
-				actionName: actionName,
-				id: id,
-			}, this.state.record);
+			res = await Fetch.postJSON<ModelResponse>(
+				"/api/Page/:actionName/:id", 
+				{
+					actionName: actionName,
+					id: id,
+				}, 
+				this.state.record
+			);
 		} catch (e) {
 			throw e;
 		}

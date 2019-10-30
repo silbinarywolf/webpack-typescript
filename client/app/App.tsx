@@ -1,9 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import {
-	BrowserRouter as Router,
-	Route,
-	Switch,
+	BrowserRouter,
 } from "react-router-dom";
 
 import "client/app/App.css";
@@ -14,11 +12,12 @@ import { Header } from "client/coreui/Header/Header";
 import { LeftAndMain } from "client/coreui/LeftAndMain/LeftAndMain";
 import { ErrorBoundary } from "client/coreui/ErrorBoundary/ErrorBoundary";
 import { Fetch } from "client/fetch/Fetch/Fetch";
-import { Loading } from "client/coreui/Loading/Loading";
+import { RouterController } from "client/router/RouterController/RouterController";
 
-// todo(Jake): 2019-10-26
-// Use system to register routes when importing files
-const EditPage = React.lazy(() => import("client/coreui/EditPage/EditPage"));
+// Register pages
+import "client/coreui/DashboardPage/register";
+import "client/editrecord/EditPage/register";
+import "client/errorpage/ErrorPage/register";
 
 export function StartApp() {
 	if (Fetch.BaseUrl() === '') {
@@ -27,22 +26,12 @@ export function StartApp() {
 
 	ReactDOM.render(
 		<ErrorBoundary>
-			<Router>
+			<BrowserRouter>
 				<Header/>
 				<LeftAndMain>
-					<Switch>
-						<React.Suspense fallback={<Loading/>}>
-							<Route exact path="/" component={EditPage}/>
-							<Route path="/edit">
-								<input type="text"/>
-							</Route>
-							<Route path="/dashboard">
-								<p>Dashboard todo</p>
-							</Route>
-						</React.Suspense>
-					</Switch>
+					<RouterController/>
 				</LeftAndMain>
-			</Router>
+			</BrowserRouter>
 		</ErrorBoundary>,
 		document.getElementById("app")
 	);

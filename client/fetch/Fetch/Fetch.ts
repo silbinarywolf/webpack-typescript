@@ -16,7 +16,7 @@ export namespace Fetch {
 	}
 
 	export async function getJSON<T>(uri:string, params?: {[param: string]: any}): Promise<T> {
-		[uri, params] = buildUriAndParams(uri, params);
+		uri = buildUriAndParams(uri, params);
 		const url = state.baseUrl + uri;
 		let response: Response;
 		try {
@@ -46,11 +46,11 @@ export namespace Fetch {
 		return content;
 	}
 
-	export async function postJSON<T>(uri: string, params: {[param: string]: any} | undefined, postBodyData: {[param: string]: any} | undefined): Promise<T> {
+	export async function postJSON<T>(uri: string, params: {[param: string]: string | number} | undefined, postBodyData: {[param: string]: any} | undefined): Promise<T> {
 		if (params === undefined) {
 			throw new Error("postJSON: params cannot be undefined.");
 		}
-		[uri, params] = buildUriAndParams(uri, params);
+		uri = buildUriAndParams(uri, params);
 		const url = state.baseUrl + uri;
 		let response: Response;
 		try {
@@ -81,9 +81,11 @@ export namespace Fetch {
 		return content;
 	}
 
-	export function buildUriAndParams(uri: string, params: {[param: string]: any} | undefined): [string, {[param: string]: any} | undefined] {
-		let newParams: {[param: string]: any} | undefined = undefined;
+	export function buildUriAndParams(uri: string, params: {[param: string]: string | number} | undefined): string {
+		let newParams: {[param: string]: string | number} | undefined = undefined;
 		if (params) {
+			// NOTE(Jake): 2019-10-30
+			// Create a copy so we don't mutate the params object given.
 			newParams = {...params};
 			let oldUri = uri;
 			for (let paramName in newParams) {
@@ -92,6 +94,8 @@ export namespace Fetch {
 				}
 				uri = uri.replace(':' + paramName, encodeURIComponent(newParams[paramName]));
 				if (uri !== oldUri) {
+					// If we replaced the param, remove from map 
+					// (so we don't append to ?)
 					delete newParams[paramName];
 					oldUri = uri;
 				}
@@ -108,6 +112,7 @@ export namespace Fetch {
 			}
 		}
 		if (newParams !== undefined) {
+			// Make remaining parameters be appended to ?
 			uri += '?';
 			for(var paramName in newParams) {
 				if (!newParams.hasOwnProperty(paramName)) {
@@ -116,6 +121,6 @@ export namespace Fetch {
 				uri += paramName + '=' + encodeURIComponent(newParams[paramName]);
 			}
 		}
-		return [uri, newParams];
+		return uri;
 	}
 }

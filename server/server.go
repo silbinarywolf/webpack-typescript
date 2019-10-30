@@ -143,16 +143,17 @@ func createFormModel(dataModel schema.DataModel) (FormModel, error) {
 	return res, nil
 }
 
-func parseId(path string) int64 {
+func parseIdFromURL(path string) (uint64, error) {
 	v := strings.Split(path, "/")
-	if len(v) > 1 {
-		if i, err := strconv.ParseInt(v[1], 10, 64); err == nil {
-			return i
-		} else {
-			return 0
-		}
+	if len(v) == 0 {
+		return 0, errors.New("Failed to parse id: " + path)
 	}
-	return 0
+	lastPart := v[len(v)-1]
+	id, err := strconv.ParseUint(lastPart, 10, 64);
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.DataModel, formModel FormModel) {
@@ -223,9 +224,9 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 	dirExists := !os.IsNotExist(err)
 
 	// Parse ID
-	newID := parseId(r.URL.Path)
-	if newID <= -1 {
-		http.Error(w, "Invalid ID, cannot be a negative number", 400)
+	newID, err := parseIdFromURL(r.URL.Path)
+	if err != nil {
+		http.Error(w, "Invalid ID, cannot parse given number: " + err.Error(), 400)
 		return
 	}
 	if newID == 0 {
@@ -237,8 +238,9 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 				if filepath.Ext(path) == ".json" {
 					idString := filepath.Base(path)
 					idString = strings.TrimSuffix(idString, filepath.Ext(idString))
-					id, err := strconv.ParseInt(idString, 10, 64)
+					id, err := strconv.ParseUint(idString, 10, 64)
 					if err != nil {
+						// Throw error if invalid file is in this folder.
 						return err
 					}
 					if newID <= id {
@@ -248,7 +250,7 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 				return err
 			})
 			if err != nil {
-				http.Error(w, err.Error(), 500)
+				http.Error(w, "Cannot determine next ID: " + err.Error(), 500)
 				return
 			}
 		} 
@@ -261,6 +263,9 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 	res := RecordSaveResponse{}
 	res.Data = record
 	res.Data["ID"] = newID
+	if title, _ := res.Data["Title"]; title == "" {
+		res.Data["Title"] = "New Page Title"
+	}
 	res.Errors = make(map[string]string)
 	{
 		if (!dirExists) {
@@ -268,7 +273,7 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 		}
 		// Write file
 		file, _ := json.MarshalIndent(res.Data, "", "	")
-		idString := strconv.FormatInt(newID, 16)
+		idString := strconv.FormatUint(newID, 10)
 		if err := ioutil.WriteFile("assets/.db/Page/"+idString+".json", file, 0644); err != nil {
 			http.Error(w, err.Error(), 500)
 			return

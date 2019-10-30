@@ -11,7 +11,12 @@ export namespace Fetch {
 		state.baseUrl = baseUrl;
 	}
 
-	export async function getJSON<T>(uri:string): Promise<T> {
+	export function BaseUrl(): string {
+		return state.baseUrl;
+	}
+
+	export async function getJSON<T>(uri:string, params?: {[param: string]: any}): Promise<T> {
+		[uri, params] = buildUriAndParams(uri, params);
 		const url = state.baseUrl + uri;
 		let response: Response;
 		try {
@@ -41,10 +46,11 @@ export namespace Fetch {
 		return content;
 	}
 
-	export async function postJSON<T>(uri: string, data: {[prop: string]: any} | undefined): Promise<T> {
-		if (data === undefined) {
-			throw new Error("postJSON: data cannot be undefined.");
+	export async function postJSON<T>(uri: string, params: {[param: string]: any} | undefined, postBodyData: {[param: string]: any} | undefined): Promise<T> {
+		if (params === undefined) {
+			throw new Error("postJSON: params cannot be undefined.");
 		}
+		[uri, params] = buildUriAndParams(uri, params);
 		const url = state.baseUrl + uri;
 		let response: Response;
 		try {
@@ -54,7 +60,7 @@ export namespace Fetch {
 					"Content-Type": "application/json"
 			    },
 			    method: "POST",
-			    body: JSON.stringify(data),
+			    body: JSON.stringify(postBodyData),
 			});
 		} catch (e) {
 			throw e;
@@ -73,5 +79,43 @@ export namespace Fetch {
 			throw e;
 		}
 		return content;
+	}
+
+	export function buildUriAndParams(uri: string, params: {[param: string]: any} | undefined): [string, {[param: string]: any} | undefined] {
+		let newParams: {[param: string]: any} | undefined = undefined;
+		if (params) {
+			newParams = {...params};
+			let oldUri = uri;
+			for (let paramName in newParams) {
+				if (!newParams.hasOwnProperty(paramName)) {
+					continue;
+				}
+				uri = uri.replace(':' + paramName, encodeURIComponent(newParams[paramName]));
+				if (uri !== oldUri) {
+					delete newParams[paramName];
+					oldUri = uri;
+				}
+			}
+			let isEmpty = true;
+			for(var paramName in newParams) {
+				if (!newParams.hasOwnProperty(paramName)) {
+					continue;
+				}
+				isEmpty = false;
+			}
+			if (isEmpty) {
+				newParams = undefined;
+			}
+		}
+		if (newParams !== undefined) {
+			uri += '?';
+			for(var paramName in newParams) {
+				if (!newParams.hasOwnProperty(paramName)) {
+					continue;
+				}
+				uri += paramName + '=' + encodeURIComponent(newParams[paramName]);
+			}
+		}
+		return [uri, newParams];
 	}
 }

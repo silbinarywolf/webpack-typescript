@@ -87,7 +87,9 @@ export default class EditPage extends React.Component<Props, State> {
 		const id = 0;
 		let response: RecordGetResponse;
 		try {
-			response = await Fetch.getJSON("/api/Page/Get/" + String(id));
+			response = await Fetch.getJSON("/api/Page/Get/:id", {
+				id: id,
+			});
 		} catch (e) {
 			this.setState({
 				error: String(e),
@@ -113,7 +115,10 @@ export default class EditPage extends React.Component<Props, State> {
 		const id = 0;
 		let res: ModelResponse;
 		try {
-			res = await Fetch.postJSON<ModelResponse>("/api/Page/" + actionName + "/" + String(id), this.state.record);
+			res = await Fetch.postJSON<ModelResponse>("/api/Page/:actionName/:id", {
+				actionName: actionName,
+				id: id,
+			}, this.state.record);
 		} catch (e) {
 			throw e;
 		}

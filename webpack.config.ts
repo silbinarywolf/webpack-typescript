@@ -2,11 +2,12 @@ const path = require("path");
 const TsconfigPathsPlugin = require("tsconfig-paths-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
 module.exports = {
 	entry: path.resolve(__dirname, "main.tsx"),
 	mode: process.env.NODE_ENV !== "production" ? "development" : "production",
-	devtool: "source-map",
+	devtool: process.env.NODE_ENV !== "production" ? "inline-source-map" : "source-map",
 	module: {
 		rules: [
 			{
@@ -66,6 +67,7 @@ module.exports = {
 		]
 	},
 	plugins: [
+	 	new CleanWebpackPlugin(),
 		new MiniCssExtractPlugin({
 			// Options similar to the same options in webpackOptions.output
 			// both options are optional
@@ -89,5 +91,19 @@ module.exports = {
 		compress: true,
 		port: 9000,
 		historyApiFallback: true,
+	},
+	optimization: {
+		runtimeChunk: 'single',
+		usedExports: true, // Tree shaking: https://webpack.js.org/guides/tree-shaking/#add-a-utility
+		splitChunks: {
+			cacheGroups: {
+				vendor: {
+					test: /[\\/]node_modules[\\/]/,
+					name: 'vendors',
+					enforce: true,
+					chunks: 'all'
+				}
+			}
+		}
 	}
 };

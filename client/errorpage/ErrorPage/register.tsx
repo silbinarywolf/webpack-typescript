@@ -1,7 +1,8 @@
 import React from "react";
 
-import { RegisterRoute } from "client/router/RouterController/RouterController";
+import { SetFallbackRoute } from "client/routes";
 
-RegisterRoute({
+SetFallbackRoute({
+	path: '',
 	component: React.lazy(() => import("client/errorpage/ErrorPage/ErrorPage")),
 });

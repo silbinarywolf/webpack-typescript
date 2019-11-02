@@ -11,7 +11,7 @@ export namespace Fetch {
 		state.baseUrl = baseUrl;
 	}
 
-	export function BaseUrl(): string {
+	export function baseUrl(): string {
 		return state.baseUrl;
 	}
 
@@ -94,7 +94,7 @@ export namespace Fetch {
 				}
 				uri = uri.replace(':' + paramName, encodeURIComponent(newParams[paramName]));
 				if (uri !== oldUri) {
-					// If we replaced the param, remove from map 
+					// If we replaced the param, remove from map
 					// (so we don't append to ?)
 					delete newParams[paramName];
 					oldUri = uri;

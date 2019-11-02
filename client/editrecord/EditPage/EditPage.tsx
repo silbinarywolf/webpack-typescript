@@ -7,9 +7,9 @@ import {
 	FormRecord,
 } from "client/form/Form/Form";
 import { Loading } from "client/coreui/Loading/Loading";
-import { Fetch } from "client/fetch/Fetch/Fetch";
+import { Fetch } from "client/fetch";
 import { EditPagePath } from "client/editrecord/EditPage/register";
-import { generateURL } from "client/router/RouterController/RouterController";
+import { generateURL } from "client/routes";
 
 interface RecordGetResponse {
 	formModel: FormModel
@@ -132,11 +132,11 @@ export default class EditPage extends React.Component<Props, State> {
 		let res: ModelResponse;
 		try {
 			res = await Fetch.postJSON<ModelResponse>(
-				"/api/Page/:actionName/:id", 
+				"/api/Page/:actionName/:id",
 				{
 					actionName: actionName,
 					id: id,
-				}, 
+				},
 				this.state.record
 			);
 		} catch (e) {

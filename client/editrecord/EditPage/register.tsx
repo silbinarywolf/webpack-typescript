@@ -1,6 +1,6 @@
 import React from "react";
 
-import { RegisterRoute } from "client/router/RouterController/RouterController";
+import { RegisterRoute } from "client/routes";
 
 export const EditPagePath = "/edit/:model/:id";
 

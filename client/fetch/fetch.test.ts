@@ -1,4 +1,4 @@
-import { Fetch } from 'client/fetch/Fetch/Fetch';
+import { Fetch } from './fetch';
 
 test('Test simple interpolation and query params', () => {
 	let uri = Fetch.buildUriAndParams('/api/Edit/Page/:id', {

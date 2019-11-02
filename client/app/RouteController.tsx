@@ -7,42 +7,42 @@ import {
 
 import { Routes, FallbackRoute } from "client/routes";
 
-export function RouterController(): JSX.Element {
+export function RouteController(props: {}): JSX.Element {
 	const routes = Routes();
 	if (routes.length === 0) {
 		throw new Error("No routes are registered.");
 	}
 	let routeElements: JSX.Element[] = [];
-	for (let props of routes) {
+	for (let route of routes) {
 		routeElements.push(
 			<Route
-				key={props.path}
-				component={props.component}
-				params={props.params}
-				exact
+				key={route.path}
+				component={route.component}
+				params={route.params}
 			/>
 		)
 	}
+
+	// Fallback route
 	const fallbackRoute = FallbackRoute();
-	if (fallbackRoute) {
-		const props = fallbackRoute;
-		routeElements.push(
-			<Route
-				key=".fallback"
-				component={props.component}
-				params={props.params}
-			/>
-		)
+	if (!fallbackRoute) {
+		throw new Error("Must configure a FallbackRoute with SetFallbackRoute.");
 	}
+
 	return (
 		<Switch>
 			<Route
-				exact
 				path="/"
+				exact
 			>
 				<Redirect to={typeof routes[0].path === 'string' ? routes[0].path : ''} />
 			</Route>
 			{routeElements}
+			{ fallbackRoute ?
+				<Route
+					component={fallbackRoute.component}
+				/> : undefined
+			}
 		</Switch>
 	);
 }

@@ -12,11 +12,12 @@ import { Header } from "client/coreui/Header/Header";
 import { LeftAndMain } from "client/coreui/LeftAndMain/LeftAndMain";
 import { ErrorBoundary } from "client/coreui/ErrorBoundary/ErrorBoundary";
 import { Fetch } from "client/fetch";
-import { RouterController } from "client/app/RouteController";
+import { RouteController } from "client/app/RouteController";
 import { Loading } from "client/coreui/Loading/Loading";
 
 // Register pages
 import "client/coreui/DashboardPage/register";
+import "client/editrecord/ListPage/register";
 import "client/editrecord/EditPage/register";
 import "client/errorpage/ErrorPage/register";
 
@@ -30,14 +31,14 @@ export function StartApp() {
 
 	ReactDOM.render(
 		<ErrorBoundary>
-			<Header/>
-			<LeftAndMain>
-				<BrowserRouter>
-					<React.Suspense fallback={<Loading/>}>
-						<RouterController/>
-					</React.Suspense>
-				</BrowserRouter>
-			</LeftAndMain>
+			<React.Suspense fallback={<Loading/>}>
+				<Header/>
+				<LeftAndMain>
+					<BrowserRouter>
+						<RouteController/>
+					</BrowserRouter>
+				</LeftAndMain>
+			</React.Suspense>
 		</ErrorBoundary>,
 		document.getElementById("app")
 	);

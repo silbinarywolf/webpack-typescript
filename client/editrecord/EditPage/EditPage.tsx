@@ -96,6 +96,9 @@ export default class EditPage extends React.Component<Props, State> {
 		})
 	}
 
+	// NOTE(Jake): 2019-11-02
+	// Think of a better name?
+	// fetchRecord? postRecord?
 	async getRecord(): Promise<FormRecord> {
 		this.setState({
 			error: '',

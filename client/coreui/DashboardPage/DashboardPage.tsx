@@ -12,7 +12,8 @@ export default class DashboardPage extends React.Component<Props> {
 	render(): JSX.Element {
 		return (
 			<React.Fragment>
-				<p>Dashboard TODO</p>
+				<h1>Dashboard</h1>
+				<p>TODO</p>
 			</React.Fragment>
 		)
 	}

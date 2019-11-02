@@ -12,7 +12,7 @@ type Component = (
 	React.ComponentType<any>
 )
 
-interface RouteProps {
+export interface RouteProps {
 	path: string;
 	component: Component;
 	params?: {[paramName: string]: string}
@@ -57,6 +57,10 @@ export function RegisterRoute(route: RouteProps) {
 	}
 	if (!route.path) {
 		throw new Error("\"path\" must be not empty.");
+	}
+	if (process.env.NODE_ENV === 'development' &&
+		route.path[0] !== '/') {
+		throw new Error("Invalid path, must begin with /");
 	}
 	route.path = "/" + CMSURLPart + route.path;
 	routes.push(route);

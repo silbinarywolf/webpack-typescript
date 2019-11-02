@@ -2,19 +2,21 @@ import React from "react";
 
 import { RegisterRoute } from "client/routes";
 
-export const EditPagePath = "/edit/:model/:id";
+const BasePath = "/data/:model";
 
-const Component = React.lazy(() => import("client/editrecord/EditPage/EditPage"));
+export const EditPagePath = BasePath + "/edit/:id";
+
+const EditPage = React.lazy(() => import("client/editrecord/EditPage/EditPage"));
 
 RegisterRoute({
-	path: "/add/:model",
+	path: BasePath + "/add",
 	params: {
 		id: "0",
 	},
-	component: Component,
+	component: EditPage,
 });
 
 RegisterRoute({
 	path: EditPagePath,
-	component: Component,
+	component: EditPage,
 });

@@ -3,9 +3,9 @@ module.exports = {
 	moduleFileExtensions: ["js", "ts", "tsx"],
 	moduleDirectories: ["node_modules"],
 	moduleNameMapper: {
-		"client(.*)": "<rootDir>/client/$1",
 		"\\.css$": "identity-obj-proxy",
-		"\\.(gif|ttf|eot|svg)$": "<rootDir>/__mocks__/fileMock.js"
+		"\\.(gif|ttf|eot|svg)$": "<rootDir>/__mocks__/fileMock.js",
+		"client(.*)": "<rootDir>/client/$1"
 	},
 	transform: {
 		"^.+\\.tsx?$": "ts-jest"

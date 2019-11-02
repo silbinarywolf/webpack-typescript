@@ -89,7 +89,11 @@ func createNewRecord(dataModel schema.DataModel) (map[string]interface{}, error)
 	if len(invalidFields) > 0 {
 		errorMessage := "The following fields have an invalid type:\n"
 		for _, field := range invalidFields {
-			errorMessage += "- " + field.Name + ": \"" + field.Type + "\"\n"
+			errorMessage += "- " + field.Name + ": \"" + field.Type + "\""
+			if field.Type == "" {
+				errorMessage += " (left blank or not set in JSON)"
+			}
+			errorMessage += "\n"
 		}
 		// todo(Jake): 2019-10-27
 		// Have system to register types and just print all available here
@@ -149,7 +153,7 @@ func parseIdFromURL(path string) (uint64, error) {
 		return 0, errors.New("Failed to parse id: " + path)
 	}
 	lastPart := v[len(v)-1]
-	id, err := strconv.ParseUint(lastPart, 10, 64);
+	id, err := strconv.ParseUint(lastPart, 10, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -219,14 +223,14 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 	}
 
 	// Get save directory
-	dir := "assets/.db/"+dataModel.Name;
-	_, err = os.Stat(dir);
+	dir := "assets/.db/" + dataModel.Name
+	_, err = os.Stat(dir)
 	dirExists := !os.IsNotExist(err)
 
 	// Parse ID
 	newID, err := parseIdFromURL(r.URL.Path)
 	if err != nil {
-		http.Error(w, "Invalid ID, cannot parse given number: " + err.Error(), 400)
+		http.Error(w, "Invalid ID, cannot parse given number: "+err.Error(), 400)
 		return
 	}
 	if newID == 0 {
@@ -250,10 +254,10 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 				return err
 			})
 			if err != nil {
-				http.Error(w, "Cannot determine next ID: " + err.Error(), 500)
+				http.Error(w, "Cannot determine next ID: "+err.Error(), 500)
 				return
 			}
-		} 
+		}
 		if newID == 0 {
 			// If first record
 			newID = 1
@@ -264,11 +268,12 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 	res.Data = record
 	res.Data["ID"] = newID
 	if title, _ := res.Data["Title"]; title == "" {
+		// Set default Title (testing that values can come from the server)
 		res.Data["Title"] = "New Page Title"
 	}
 	res.Errors = make(map[string]string)
 	{
-		if (!dirExists) {
+		if !dirExists {
 			os.MkdirAll(dir, 0700)
 		}
 		// Write file

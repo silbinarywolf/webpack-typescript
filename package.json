@@ -2,7 +2,8 @@
 	"name": "webpack-typescript",
 	"scripts": {
 		"start": "webpack-dev-server",
-		"build": "webpack -p --config webpack.config.ts",
+		"build": "webpack -p --config webpack.config.ts && go build",
+		"server": "go build && ./webpack-typescript",
 		"test": "jest"
 	},
 	"engines": {

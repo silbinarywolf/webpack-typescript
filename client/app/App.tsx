@@ -1,8 +1,5 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import {
-	BrowserRouter,
-} from "react-router-dom";
 
 import "client/app/App.css";
 import "client/form/ButtonReset/ButtonReset.css"
@@ -34,9 +31,7 @@ export function StartApp() {
 			<React.Suspense fallback={<Loading/>}>
 				<Header/>
 				<LeftAndMain>
-					<BrowserRouter>
-						<RouteController/>
-					</BrowserRouter>
+					<RouteController/>
 				</LeftAndMain>
 			</React.Suspense>
 		</ErrorBoundary>,

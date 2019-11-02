@@ -8,8 +8,8 @@ import {
 } from "client/form/Form/Form";
 import { Loading } from "client/coreui/Loading/Loading";
 import { Fetch } from "client/fetch";
-import { EditPagePath } from "client/editrecord/EditPage/register";
-import { generateURL } from "client/routes";
+import { EditPageURL } from "client/editrecord/EditPage/register";
+import { generateAdminURL } from "client/routes";
 
 interface RecordGetResponse {
 	formModel: FormModel
@@ -56,7 +56,7 @@ export default class EditPage extends React.Component<Props, State> {
 	}
 
 	componentDidUpdate(prevProps: Props, prevState: State, snapshot: any) {
-		throw new Error('Need to force state to reset for case where you navigate to /add/Page')
+		console.warn('Need to force state to reset for case where you navigate to /add/Page')
 	}
 
 	readonly onRecordChange = (record: FormRecord): void => {
@@ -65,24 +65,34 @@ export default class EditPage extends React.Component<Props, State> {
 		})
 	}
 
-	readonly onSubmit = (actionName: string): void => {
+	readonly canSave = (): boolean => {
+		return !this.state.isSubmitting;
+	}
+
+	readonly onSaveSubmit = (actionName: string): void => {
+		if (!this.canSave()) {
+			return;
+		}
 		this.setState({
 			error: '',
 			isSubmitting: true,
 		})
+		let isNewRecord: boolean = true;
+		if (this.state.record) {
+			const id = this.state.record["ID"];
+			isNewRecord = (id !== undefined && id !== 0 && id !== "");
+		}
 		this.saveRecord(actionName)
 		.then((record) => {
 			if (!record) {
 				return;
 			}
-			const isNewRecord = this.state.record ? this.state.record["ID"] === 0 : false;
-			console.warn(this.state.record, this.state.record ? this.state.record["ID"] : undefined);
 			this.setState({
 				isSubmitting: false,
 				record: record,
 			})
 			if (isNewRecord) {
-				this.props.history.push(generateURL(EditPagePath, {
+				this.props.history.push(generateAdminURL(EditPageURL, {
 					id: record["ID"],
 					model: this.props.match.params.model,
 				}));
@@ -131,12 +141,21 @@ export default class EditPage extends React.Component<Props, State> {
 			data: FormRecord;
 			errors: {[name: string]: string};
 		}
-		const id = 0;
+		let id: number = 0;
+		if (this.state.record &&
+			this.state.record["ID"]) {
+			let recordID = this.state.record["ID"];
+			if (typeof recordID !== "number") {
+				throw new Error("Record ID must be a number type.");
+			}
+			id = recordID;
+		}
 		let res: ModelResponse;
 		try {
 			res = await Fetch.postJSON<ModelResponse>(
-				"/api/Page/:actionName/:id",
+				"/api/:model/:actionName/:id",
 				{
+					model: this.props.match.params.model,
 					actionName: actionName,
 					id: id,
 				},
@@ -148,9 +167,6 @@ export default class EditPage extends React.Component<Props, State> {
 		if (res.data === undefined) {
 			throw new Error('Unexpected from server, undefined value.');
 		}
-		this.setState({
-			record: res.data,
-		});
 		return res.data;
 	}
 
@@ -181,7 +197,7 @@ export default class EditPage extends React.Component<Props, State> {
 							error={error}
 							model={model}
 							onRecordChange={this.onRecordChange}
-							onSubmit={this.onSubmit}
+							onSubmit={this.onSaveSubmit}
 							disabled={isSubmitting}
 						/>
 						{isSubmitting &&

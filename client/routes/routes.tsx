@@ -31,7 +31,7 @@ let fallbackRoute: RouteProps | undefined;
 // NOTE(Jake): 2019-10-30
 // If I reuse all this code to build a CMS, I want this
 // to be configurable.
-const CMSURLPart = 'admin';
+const AdminURL = 'admin';
 
 export function Routes(): readonly Readonly<RouteProps>[] {
 	if (process.env.NODE_ENV === 'development') {
@@ -62,7 +62,7 @@ export function RegisterRoute(route: RouteProps) {
 		route.path[0] !== '/') {
 		throw new Error("Invalid path, must begin with /");
 	}
-	route.path = "/" + CMSURLPart + route.path;
+	route.path = "/" + AdminURL + route.path;
 	routes.push(route);
 }
 
@@ -85,6 +85,6 @@ export function SetFallbackRoute(route: RouteProps) {
 	return;
 }
 
-export function generateURL<T extends {[prop: string]: string | number}>(uri: string, routeProps: T) {
-	return Fetch.buildUriAndParams("/" + CMSURLPart + uri, routeProps);
+export function generateAdminURL<T extends {[prop: string]: string | number}>(uri: string, routeProps: T) {
+	return Fetch.buildUriAndParams("/" + AdminURL + uri, routeProps);
 }

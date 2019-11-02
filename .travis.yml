@@ -1,14 +1,21 @@
-# Based off of https://github.com/cypress-io/cypress-example-todomvc/blob/master/.travis.yml
-language: node_js
+# Based on this: https://stackoverflow.com/a/52414495/5013410
 
-node_js:
-  - 10.16
+matrix:
+  include:
+    - language: node_js
+      node_js:
+        - 10.16
+      install:
+        - git submodule init
+        - git submodule update
+        - yarn install --offline
+      script:
+        - yarn build
+        - yarn test
 
-install:
-  - git submodule init
-  - git submodule update
-
-script:
-  - yarn install --offline
-  - yarn build
-  - yarn test
+    - language: go
+      go:
+        - 1.12
+      script:
+        - go build
+        - go test ./...

@@ -1,4 +1,4 @@
-name: Node CI
+name: Build App Client and Server
 
 on: [push, pull_request]
 
@@ -10,16 +10,27 @@ jobs:
     strategy:
       matrix:
         node-version: [8.x, 10.x, 12.x]
+        go: ['1.12']
 
     steps:
     - uses: actions/checkout@v1
     - uses: actions/setup-node@v1
       with:
         node-version: '10.x'
+    - name: Set up Go ${{ matrix.go }}
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go }}
+      id: go
     - run: |
         git submodule init
         git submodule update
 
-    - run: yarn install --offline
-    - run: yarn build
-    - run: yarn test
+    - run: |
+        yarn install --offline
+        yarn build
+        yarn test
+
+    - run: |
+        go build
+        go test ./...

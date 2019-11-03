@@ -1,14 +1,15 @@
-# Webpack TypeScript
+# DataGal
 
 [![Actions Status](https://github.com/silbinarywolf/webpack-typescript/workflows/Node%20CI/badge.svg)](https://github.com/silbinarywolf/webpack-typescript/actions)
 [![Build Status](https://travis-ci.org/silbinarywolf/webpack-typescript.svg?branch=master)](https://travis-ci.org/silbinarywolf/webpack-typescript)
 
-A starter config that utilizes [CSS Modules TypeScript Loader](https://github.com/seek-oss/css-modules-typescript-loader) so that CSS classes can be imported and checked at compile-time with TypeScript. This repository also experiments with using `yarn install --offline` to setup the node_modules folder from a Git Submodule.
+A single-binary locally-hosted web server to manage data that you can define the structure of with JSON files. This tool can be used to manage a database similar to RPG Maker's Database Editor or OGMO Editors Project settings.
 
-## Requirements
+## Development Requirements
 
-* Node v10.16.0+
+* Node v10.16.0+ or v12.12.0+
 * Yarn 1.15.0+
+* Go 1.12+
 
 ## Install
 
@@ -22,12 +23,17 @@ yarn install --offline
 
 ## Run
 
-**Run dev. server:**
+**Build and run server application:**
+```
+yarn server
+```
+
+**Run client application in watch mode:**
 ```
 yarn start
 ```
 
-**Build distributable:**
+**Build client distributables:**
 ```
 yarn build
 ```
@@ -35,6 +41,7 @@ yarn build
 ## Documentation
 
 * [License](LICENSE.md)
+* [Contributing](CONTRIBUTING.md)
 
 ## Credits
 

@@ -19,15 +19,15 @@ export interface FormModel {
 	actions: FieldModel[];
 }
 
-export type FormRecord = {[fieldName: string]: string | number} | undefined;
+export type FormRecord = {[fieldName: string]: string | number};
 
 interface Props {
 	id: string;
-	record: FormRecord;
+	record: FormRecord | undefined;
 	error: string;
 	model: FormModel;
 	disabled?: boolean;
-	onRecordChange: (record: FormRecord) => void;
+	onRecordChange: (record: FormRecord | undefined) => void;
 	onSubmit: (actionName: string) => void;
 }
 

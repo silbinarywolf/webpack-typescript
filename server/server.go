@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -34,6 +35,11 @@ type RecordGetResponse struct {
 	Data      map[string]interface{} `json:"data"`
 }
 
+type RecordListResponse struct {
+	DataModel schema.DataModel         `json:"dataModel"`
+	Data      []map[string]interface{} `json:"data"`
+}
+
 type RecordSaveResponse struct {
 	Data   map[string]interface{} `json:"data"`
 	Errors map[string]string      `json:"errors"`
@@ -56,6 +62,9 @@ func Start() {
 			os.Exit(0)
 		}
 
+		http.HandleFunc("/api/"+name+"/List", func(w http.ResponseWriter, r *http.Request) {
+			ListModelHandler(w, r, dataModel)
+		})
 		http.HandleFunc("/api/"+name+"/Get/", func(w http.ResponseWriter, r *http.Request) {
 			GetModelHandler(w, r, dataModel, formModel)
 		})
@@ -173,9 +182,87 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.Da
 		http.Error(w, "Please send a "+http.MethodGet+" request", 400)
 		return
 	}
+	// Parse ID
+	newID, err := parseIdFromURL(r.URL.Path)
+	if err != nil {
+		http.Error(w, "Invalid ID, cannot parse given number: "+err.Error(), 400)
+		return
+	}
+	path := "assets/.db/" + dataModel.Name + "/" + strconv.FormatUint(newID, 10) + ".json"
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	var data map[string]interface{}
+	err = json.Unmarshal(bytes, &data)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
 	res := RecordGetResponse{}
 	res.FormModel = formModel
-	res.Data = dataModel.NewRecord()
+	res.Data = data
+	jsonOutput, err := json.Marshal(&res)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Write(jsonOutput)
+}
+
+func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.DataModel) {
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", 400)
+		return
+	}
+	handleCors(&w, r)
+	if r.Method == http.MethodOptions {
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "Please send a "+http.MethodGet+" request", 400)
+		return
+	}
+
+	// Load all records
+	list := make([]map[string]interface{}, 0)
+	dir := "assets/.db/" + dataModel.Name
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		pathList := make([]string, 0, 100)
+		err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+			if filepath.Ext(path) == ".json" {
+				pathList = append(pathList, path)
+			}
+			return err
+		})
+		if err != nil {
+			http.Error(w, "Error loading list of records from directory: "+err.Error(), 500)
+			return
+		}
+		// Sort alphabetically
+		sort.Slice(pathList[:], func(i, j int) bool {
+			return pathList[i] < pathList[j]
+		})
+		for _, path := range pathList {
+			data, err := ioutil.ReadFile(path)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			var res map[string]interface{}
+			err = json.Unmarshal(data, &res)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			list = append(list, res)
+		}
+	}
+
+	res := RecordListResponse{}
+	res.DataModel = dataModel
+	res.Data = list
 	jsonOutput, err := json.Marshal(&res)
 	if err != nil {
 		http.Error(w, err.Error(), 500)

@@ -23,8 +23,8 @@ interface State {
 	 * loadedRecord is the record when it's state
 	 * was loaded from the API endpoint.
 	 */
-	loadedRecord: FormRecord;
-	record: FormRecord;
+	loadedRecord: FormRecord | undefined;
+	record: FormRecord | undefined;
 	model: FormModel | undefined;
 	goToRoute: string;
 }
@@ -55,11 +55,7 @@ export default class EditPage extends React.Component<Props, State> {
 		this.getRecord();
 	}
 
-	componentDidUpdate(prevProps: Props, prevState: State, snapshot: any) {
-		console.warn('Need to force state to reset for case where you navigate to /add/Page')
-	}
-
-	readonly onRecordChange = (record: FormRecord): void => {
+	readonly onRecordChange = (record: FormRecord | undefined): void => {
 		this.setState({
 			record: record,
 		})
@@ -80,7 +76,7 @@ export default class EditPage extends React.Component<Props, State> {
 		let isNewRecord: boolean = true;
 		if (this.state.record) {
 			const id = this.state.record["ID"];
-			isNewRecord = (id !== undefined && id !== 0 && id !== "");
+			isNewRecord = (id === undefined || id === 0 || id === "");
 		}
 		this.saveRecord(actionName)
 		.then((record) => {
@@ -109,21 +105,22 @@ export default class EditPage extends React.Component<Props, State> {
 	// NOTE(Jake): 2019-11-02
 	// Think of a better name?
 	// fetchRecord? postRecord?
-	async getRecord(): Promise<FormRecord> {
+	async getRecord(): Promise<FormRecord | undefined> {
 		this.setState({
 			error: '',
 		})
-		const id = 0;
+		const id = this.props.match.params.id;
 		let response: RecordGetResponse;
 		try {
-			response = await Fetch.getJSON("/api/Page/Get/:id", {
+			response = await Fetch.getJSON("/api/:model/Get/:id", {
+				model: this.props.match.params.model,
 				id: id,
 			});
 		} catch (e) {
 			this.setState({
 				error: String(e),
 			});
-			return;
+			return undefined;
 		}
 		this.setState({
 			model: response.formModel,

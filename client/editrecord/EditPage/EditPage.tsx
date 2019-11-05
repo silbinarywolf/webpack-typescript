@@ -112,7 +112,7 @@ export default class EditPage extends React.Component<Props, State> {
 		const id = this.props.match.params.id;
 		let response: RecordGetResponse;
 		try {
-			response = await Fetch.getJSON("/api/:model/Get/:id", {
+			response = await Fetch.getJSON("/api/record/:model/Get/:id", {
 				model: this.props.match.params.model,
 				id: id,
 			});
@@ -150,7 +150,7 @@ export default class EditPage extends React.Component<Props, State> {
 		let res: ModelResponse;
 		try {
 			res = await Fetch.postJSON<ModelResponse>(
-				"/api/:model/:actionName/:id",
+				"/api/record/:model/:actionName/:id",
 				{
 					model: this.props.match.params.model,
 					actionName: actionName,

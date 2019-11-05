@@ -30,6 +30,10 @@ type FieldModel struct {
 	Label string `json:"label"`
 }
 
+type ModelListResponse struct {
+	DataModels []schema.DataModel `json:"dataModels"`
+}
+
 type RecordGetResponse struct {
 	FormModel FormModel              `json:"formModel"`
 	Data      map[string]interface{} `json:"data"`
@@ -52,6 +56,9 @@ func Start() {
 	// Create system to watch files so that schema can be updated on the fly
 
 	dataModels := schema.DataModels()
+	http.HandleFunc("/api/model/list", func(w http.ResponseWriter, r *http.Request) {
+		ModelListModelHandler(w, r, dataModels)
+	})
 	for _, dataModel := range dataModels {
 		name := dataModel.Name
 		formModel, err := createFormModel(dataModel)
@@ -62,13 +69,13 @@ func Start() {
 			os.Exit(0)
 		}
 
-		http.HandleFunc("/api/"+name+"/List", func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/api/record/"+name+"/List", func(w http.ResponseWriter, r *http.Request) {
 			ListModelHandler(w, r, dataModel)
 		})
-		http.HandleFunc("/api/"+name+"/Get/", func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/api/record/"+name+"/Get/", func(w http.ResponseWriter, r *http.Request) {
 			GetModelHandler(w, r, dataModel, formModel)
 		})
-		http.HandleFunc("/api/"+name+"/Edit/", func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/api/record/"+name+"/Edit/", func(w http.ResponseWriter, r *http.Request) {
 			EditModelHandler(w, r, dataModel, formModel)
 		})
 	}
@@ -167,6 +174,29 @@ func parseIdFromURL(path string) (uint64, error) {
 		return 0, err
 	}
 	return id, nil
+}
+
+func ModelListModelHandler(w http.ResponseWriter, r *http.Request, dataModels []schema.DataModel) {
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", 400)
+		return
+	}
+	handleCors(&w, r)
+	if r.Method == http.MethodOptions {
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "Please send a "+http.MethodGet+" request", 400)
+		return
+	}
+	res := ModelListResponse{}
+	res.DataModels = dataModels
+	jsonOutput, err := json.Marshal(&res)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Write(jsonOutput)
 }
 
 func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.DataModel, formModel FormModel) {
@@ -366,7 +396,7 @@ func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 		// Write file
 		file, _ := json.MarshalIndent(res.Data, "", "	")
 		idString := strconv.FormatUint(newID, 10)
-		if err := ioutil.WriteFile("assets/.db/Page/"+idString+".json", file, 0644); err != nil {
+		if err := ioutil.WriteFile("assets/.db/"+dataModel.Name+"/"+idString+".json", file, 0644); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}

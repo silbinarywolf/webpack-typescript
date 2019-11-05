@@ -3,22 +3,13 @@ import { RouteComponentProps } from "react-router";
 
 import { Fetch } from "client/fetch";
 import { FormRecord } from "client/form/Form/Form";
+import { DataModel } from "client/models/DataModel";
 
 import styles from "client/editrecord/ListPage/ListPage.css"
 
 interface RecordListResponse {
 	dataModel: DataModel
 	data: FormRecord[]
-}
-
-interface DataModelField {
-	name: string
-	type: string
-}
-
-interface DataModel {
-	name: string
-	fields: DataModelField[]
 }
 
 interface State {
@@ -54,7 +45,7 @@ export default class ListPage extends React.Component<Props, State> {
 		})
 		let response: RecordListResponse;
 		try {
-			response = await Fetch.getJSON("/api/:model/List", {
+			response = await Fetch.getJSON("/api/record/:model/List", {
 				model: this.props.match.params.model,
 			});
 		} catch (e) {

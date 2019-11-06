@@ -60,6 +60,7 @@ func Start() {
 		ModelListModelHandler(w, r, dataModels)
 	})
 	for _, dataModel := range dataModels {
+		dataModel := dataModel
 		name := dataModel.Name
 		formModel, err := createFormModel(dataModel)
 		if err != nil {
@@ -216,6 +217,19 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.Da
 	newID, err := parseIdFromURL(r.URL.Path)
 	if err != nil {
 		http.Error(w, "Invalid ID, cannot parse given number: "+err.Error(), 400)
+		return
+	}
+	if newID == 0 {
+		// New record
+		res := RecordGetResponse{}
+		res.FormModel = formModel
+		res.Data = dataModel.NewRecord()
+		jsonOutput, err := json.Marshal(&res)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		w.Write(jsonOutput)
 		return
 	}
 	path := "assets/.db/" + dataModel.Name + "/" + strconv.FormatUint(newID, 10) + ".json"

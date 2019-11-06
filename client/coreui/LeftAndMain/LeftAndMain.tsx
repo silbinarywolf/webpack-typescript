@@ -68,7 +68,7 @@ export class LeftAndMain extends React.Component<Props, State> {
 					<ul className={styles.menuList}>
 						{dataModels.map((dataModel) => {
 							return (
-								<li>
+								<li key={dataModel.name}>
 									<a
 										href={generateAdminURL("/data/:model", {
 											model: dataModel.name,

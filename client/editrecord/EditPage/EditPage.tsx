@@ -106,10 +106,15 @@ export default class EditPage extends React.Component<Props, State> {
 	// Think of a better name?
 	// fetchRecord? postRecord?
 	async getRecord(): Promise<FormRecord | undefined> {
+		let id: number | string | undefined = this.props.match.params.id;
+		if (id === undefined ||
+			id === "0" ||
+			id === "") {
+			id = 0;
+		}
 		this.setState({
 			error: '',
 		})
-		const id = this.props.match.params.id;
 		let response: RecordGetResponse;
 		try {
 			response = await Fetch.getJSON("/api/record/:model/Get/:id", {

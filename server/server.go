@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"unicode"
+	"unicode/utf8"
 	"strings"
 
 	"github.com/silbinarywolf/webpack-typescript/server/internal/schema"
@@ -53,9 +55,20 @@ func Start() {
 	schema.LoadAll()
 
 	// TODO(Jake): 2019-10-27
-	// Create system to watch files so that schema can be updated on the fly
+	// Maybe a system to watch model files so that schema can be updated on the fly
 
 	dataModels := schema.DataModels()
+
+	// TODO(Jake): 2019-11-07
+	// Add logic here to validate against field types. DataModel + Field Type should
+	// not clash.
+	for _, dataModel := range dataModels {
+		r, _ := utf8.DecodeRuneInString(dataModel.Name[0:])
+		if !unicode.IsUpper(r) {
+			panic("Invalid DataModel, must start with a capital letter: " + dataModel.Name)
+		}
+	}
+
 	http.HandleFunc("/api/model/list", func(w http.ResponseWriter, r *http.Request) {
 		ModelListModelHandler(w, r, dataModels)
 	})
@@ -90,50 +103,18 @@ func handleCors(w *http.ResponseWriter, req *http.Request) {
 	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 }
 
-func createNewRecord(dataModel schema.DataModel) (map[string]interface{}, error) {
-	var invalidFields []*schema.DataModelField
-	data := make(map[string]interface{})
-	for _, field := range dataModel.Fields {
-		switch field.Type {
-		case "String":
-			data[field.Name] = ""
-		case "Int64":
-			data[field.Name] = ""
-		default:
-			invalidFields = append(invalidFields, field)
-		}
-	}
-	if len(invalidFields) > 0 {
-		errorMessage := "The following fields have an invalid type:\n"
-		for _, field := range invalidFields {
-			errorMessage += "- " + field.Name + ": \"" + field.Type + "\""
-			if field.Type == "" {
-				errorMessage += " (left blank or not set in JSON)"
-			}
-			errorMessage += "\n"
-		}
-		// todo(Jake): 2019-10-27
-		// Have system to register types and just print all available here
-		errorMessage += "\nThe field types that are available are:\n"
-		errorMessage += "- String"
-		errorMessage += "- Int64"
-		return nil, errors.New(errorMessage)
-	}
-	return data, nil
-}
-
 func createFormModel(dataModel schema.DataModel) (FormModel, error) {
 	var res FormModel
 	var invalidFields []*schema.DataModelField
 	for _, field := range dataModel.Fields {
 		switch field.Type {
-		case "String":
+		case "string":
 			res.Fields = append(res.Fields, FieldModel{
 				Type:  "TextField",
 				Name:  field.Name,
 				Label: field.Name,
 			})
-		case "Int64":
+		case "int64":
 			res.Fields = append(res.Fields, FieldModel{
 				Type: "HiddenField",
 				Name: field.Name,
@@ -142,17 +123,8 @@ func createFormModel(dataModel schema.DataModel) (FormModel, error) {
 			invalidFields = append(invalidFields, field)
 		}
 	}
-	if len(invalidFields) > 0 {
-		errorMessage := "The following fields have an invalid type:\n"
-		for _, field := range invalidFields {
-			errorMessage += "- " + field.Name + ": \"" + field.Type + "\"\n"
-		}
-		// todo(Jake): 2019-10-27
-		// Have system to register types and just print all available here
-		errorMessage += "\nThe field types that are available are:\n"
-		errorMessage += "- String"
-		errorMessage += "- Int64"
-		return FormModel{}, errors.New(errorMessage)
+	if err := schema.InvalidFieldsToError(invalidFields); err != nil {
+		return FormModel{}, err;
 	}
 	if len(res.Actions) == 0 {
 		res.Actions = append(res.Actions, FieldModel{

@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/silbinarywolf/webpack-typescript/server/internal/datatype"
 )
 
 const (
@@ -18,6 +20,7 @@ cannot define field using reserved name. Reserved names are:
 var (
 	modelMap  = make(map[string]*DataModel)
 	modelList []DataModel
+	hasLoaded bool
 )
 
 type DataModelField struct {
@@ -53,6 +56,11 @@ func (dataModel *DataModel) NewRecord() map[string]interface{} {
 }
 
 func LoadAll() {
+	if hasLoaded {
+		panic("Cannot call LoadAll() more than once.")
+	}
+	hasLoaded = true;
+
 	fileList := make([]string, 0)
 	e := filepath.Walk("assets/.model", func(path string, f os.FileInfo, err error) error {
 		if filepath.Ext(path) == ".json" {
@@ -82,7 +90,43 @@ func LoadAll() {
 }
 
 func DataModels() []DataModel {
+	if !hasLoaded {
+		panic("Must call LoadAll() first.")
+	}
 	return modelList
+}
+
+func CreateNewRecord(dataModel DataModel) (map[string]interface{}, error) {
+	var invalidFields []*DataModelField
+	data := make(map[string]interface{})
+	for _, field := range dataModel.Fields {
+		typeInfo, ok := datatype.Get(field.Type)
+		if !ok {
+			invalidFields = append(invalidFields, field)
+			continue;
+		}
+		data[field.Name] = typeInfo.ZeroValue();
+	}
+	if err := InvalidFieldsToError(invalidFields); err != nil {
+		return nil, err;
+	}
+	return data, nil
+}
+
+func InvalidFieldsToError(invalidFields []*DataModelField) (error) {
+	if len(invalidFields) == 0 {
+		return nil
+	}
+	errorMessage := "The following fields have an invalid type:\n"
+	for _, field := range invalidFields {
+		errorMessage += "- " + field.Name + ": \"" + field.Type + "\""
+		if field.Type == "" {
+			errorMessage += " (left blank or not set in JSON)"
+		}
+		errorMessage += "\n"
+	}
+	errorMessage += "\nThe field types that are available are:\n- " + strings.Join(datatype.List(), "\n- ")
+	return errors.New(errorMessage)
 }
 
 func decodeAndValidateModel(path string) (DataModel, error) {
@@ -128,7 +172,7 @@ func decodeAndValidateModel(path string) (DataModel, error) {
 			}
 			reservedField := &DataModelField{
 				Name: "ID",
-				Type: "Int64",
+				Type: "int64",
 			}
 			reservedFields = append(reservedFields, reservedField)
 			dataModel.fieldMap[reservedField.Name] = reservedField
@@ -137,29 +181,9 @@ func decodeAndValidateModel(path string) (DataModel, error) {
 	}
 	// Create default new record structure
 	{
-		var invalidFields []*DataModelField
-		data := make(map[string]interface{})
-		for _, field := range dataModel.Fields {
-			switch field.Type {
-			case "String":
-				data[field.Name] = ""
-			case "Int64":
-				data[field.Name] = int64(0)
-			default:
-				invalidFields = append(invalidFields, field)
-			}
-		}
-		if len(invalidFields) > 0 {
-			errorMessage := "The following fields have an invalid type:\n"
-			for _, field := range invalidFields {
-				errorMessage += "- " + field.Name + ": \"" + field.Type + "\"\n"
-			}
-			// todo(Jake): 2019-10-27
-			// Have system to register types and just print all available here
-			errorMessage += "\nThe field types that are available are:\n"
-			errorMessage += "- String"
-			errorMessage += "- Int64"
-			return emptyModel, errors.New(errorMessage)
+		data, err := CreateNewRecord(dataModel)
+		if err != nil {
+			return emptyModel, err
 		}
 		dataModel.newRecordMap = data
 	}

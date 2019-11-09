@@ -83,8 +83,8 @@ test:
 pre-commit:
   piped: true
   commands:
-    fix:
-      run: lefthook run fix
+    lint:
+      run: lefthook run lint
     build:
       run: lefthook run build
     test:

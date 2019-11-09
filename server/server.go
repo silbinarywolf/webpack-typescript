@@ -10,10 +10,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"unicode"
 	"unicode/utf8"
-	"strings"
 
+	"github.com/silbinarywolf/webpack-typescript/server/internal/datatype"
 	"github.com/silbinarywolf/webpack-typescript/server/internal/schema"
 )
 
@@ -107,24 +108,19 @@ func createFormModel(dataModel schema.DataModel) (FormModel, error) {
 	var res FormModel
 	var invalidFields []*schema.DataModelField
 	for _, field := range dataModel.Fields {
-		switch field.Type {
-		case "string":
-			res.Fields = append(res.Fields, FieldModel{
-				Type:  "TextField",
-				Name:  field.Name,
-				Label: field.Name,
-			})
-		case "int64":
-			res.Fields = append(res.Fields, FieldModel{
-				Type: "HiddenField",
-				Name: field.Name,
-			})
-		default:
+		typeInfo, ok := datatype.Get(field.Type)
+		if !ok {
 			invalidFields = append(invalidFields, field)
+			continue
 		}
+		res.Fields = append(res.Fields, FieldModel{
+			Type:  typeInfo.FormFieldModel(), // "TextField",
+			Name:  field.Name,
+			Label: field.Name,
+		})
 	}
 	if err := schema.InvalidFieldsToError(invalidFields); err != nil {
-		return FormModel{}, err;
+		return FormModel{}, err
 	}
 	if len(res.Actions) == 0 {
 		res.Actions = append(res.Actions, FieldModel{

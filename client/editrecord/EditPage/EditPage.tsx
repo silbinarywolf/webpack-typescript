@@ -1,15 +1,15 @@
-import React from "react";
-import { RouteComponentProps } from "react-router";
+import React from "react"
+import { RouteComponentProps } from "react-router"
 
 import {
 	Form,
 	FormModel,
 	FormRecord,
-} from "client/form/Form/Form";
-import { Loading } from "client/coreui/Loading/Loading";
-import { Fetch } from "client/fetch";
-import { EditPageURL } from "client/editrecord/EditPage/register";
-import { generateAdminURL } from "client/routes";
+} from "client/form/Form/Form"
+import { Loading } from "client/coreui/Loading/Loading"
+import { getJSON, postJSON } from "client/fetch/fetch"
+import { EditPageURL } from "client/editrecord/EditPage/register"
+import { generateAdminURL } from "client/routes"
 
 interface RecordGetResponse {
 	formModel: FormModel
@@ -39,20 +39,20 @@ interface Props extends RouteComponentProps<Params> {
 
 export default class EditPage extends React.Component<Props, State> {
 	constructor(props: Props) {
-		super(props);
+		super(props)
 
 		this.state = {
 			isSubmitting: false,
-			error: '',
+			error: "",
 			loadedRecord: undefined,
 			record: undefined,
 			model: undefined,
-			goToRoute: '',
+			goToRoute: "",
 		}
 	}
 
 	componentDidMount() {
-		this.getRecord();
+		this.getRecord()
 	}
 
 	readonly onRecordChange = (record: FormRecord | undefined): void => {
@@ -62,99 +62,99 @@ export default class EditPage extends React.Component<Props, State> {
 	}
 
 	readonly canSave = (): boolean => {
-		return !this.state.isSubmitting;
+		return !this.state.isSubmitting
 	}
 
 	readonly onSaveSubmit = (actionName: string): void => {
 		if (!this.canSave()) {
-			return;
+			return
 		}
 		this.setState({
-			error: '',
+			error: "",
 			isSubmitting: true,
 		})
-		let isNewRecord: boolean = true;
+		let isNewRecord: boolean = true
 		if (this.state.record) {
-			const id = this.state.record["ID"];
-			isNewRecord = (id === undefined || id === 0 || id === "");
+			const id = this.state.record["ID"]
+			isNewRecord = (id === undefined || id === 0 || id === "")
 		}
 		this.saveRecord(actionName)
-		.then((record) => {
-			if (!record) {
-				return;
-			}
-			this.setState({
-				isSubmitting: false,
-				record: record,
+			.then((record) => {
+				if (!record) {
+					return
+				}
+				this.setState({
+					isSubmitting: false,
+					record: record,
+				})
+				if (isNewRecord) {
+					this.props.history.push(generateAdminURL(EditPageURL, {
+						id: record["ID"],
+						model: this.props.match.params.model,
+					}))
+				}
 			})
-			if (isNewRecord) {
-				this.props.history.push(generateAdminURL(EditPageURL, {
-					id: record["ID"],
-					model: this.props.match.params.model,
-				}));
-			}
-		})
-		.catch((e) => {
-			this.setState({
-				isSubmitting: false,
-				error: String(e),
+			.catch((e) => {
+				this.setState({
+					isSubmitting: false,
+					error: String(e),
+				})
 			})
-		})
 	}
 
 	// NOTE(Jake): 2019-11-02
 	// Think of a better name?
 	// fetchRecord? postRecord?
 	async getRecord(): Promise<FormRecord | undefined> {
-		let id: number | string | undefined = this.props.match.params.id;
+		let id: number | string | undefined = this.props.match.params.id
 		if (id === undefined ||
 			id === "0" ||
 			id === "") {
-			id = 0;
+			id = 0
 		}
 		this.setState({
-			error: '',
+			error: "",
 		})
-		let response: RecordGetResponse;
+		let response: RecordGetResponse
 		try {
-			response = await Fetch.getJSON("/api/record/:model/Get/:id", {
+			response = await getJSON("/api/record/:model/Get/:id", {
 				model: this.props.match.params.model,
 				id: id,
-			});
+			})
 		} catch (e) {
 			this.setState({
 				error: String(e),
-			});
-			return undefined;
+			})
+			return undefined
 		}
 		this.setState({
 			model: response.formModel,
 			loadedRecord: response.data,
 			record: response.data,
-		});
-		return response.data;
+		})
+		return response.data
 	}
 
 	async saveRecord(actionName: string): Promise<FormRecord> {
-		if (actionName === '') {
-			throw new Error('Cannot submit with blank actionName.');
+		if (actionName === "") {
+			throw new Error("Cannot submit with blank actionName.")
 		}
 		interface ModelResponse {
 			data: FormRecord;
 			errors: {[name: string]: string};
 		}
-		let id: number = 0;
+		let id: number = 0
 		if (this.state.record &&
 			this.state.record["ID"]) {
-			let recordID = this.state.record["ID"];
+			let recordID = this.state.record["ID"]
 			if (typeof recordID !== "number") {
-				throw new Error("Record ID must be a number type.");
+				throw new Error("Record ID must be a number type.")
 			}
-			id = recordID;
+			id = recordID
 		}
-		let res: ModelResponse;
+		let res: ModelResponse
 		try {
-			res = await Fetch.postJSON<ModelResponse>(
+			res = await postJSON<ModelResponse>(
 				"/api/record/:model/:actionName/:id",
 				{
 					model: this.props.match.params.model,
@@ -162,14 +162,17 @@ export default class EditPage extends React.Component<Props, State> {
 					id: id,
 				},
 				this.state.record
-			);
+			)
 		} catch (e) {
-			throw e;
+			this.setState({
+				error: String(e),
+			})
+			return undefined
 		}
 		if (res.data === undefined) {
-			throw new Error('Unexpected from server, undefined value.');
+			throw new Error("Unexpected from server, undefined value.")
 		}
-		return res.data;
+		return res.data
 	}
 
 	render(): JSX.Element {
@@ -178,7 +181,7 @@ export default class EditPage extends React.Component<Props, State> {
 			record,
 			error,
 			isSubmitting,
-		} = this.state;
+		} = this.state
 		return (
 			<React.Fragment>
 				{model === undefined &&

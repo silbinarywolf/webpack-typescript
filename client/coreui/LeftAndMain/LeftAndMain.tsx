@@ -1,10 +1,10 @@
-import React from "react";
+import React from "react"
 
-import { DataModel } from "client/models/DataModel";
-import { Fetch } from "client/fetch";
-import { generateAdminURL } from "client/routes";
+import { DataModel } from "client/models/DataModel"
+import { getJSON } from "client/fetch/fetch"
+import { generateAdminURL } from "client/routes"
 
-import styles from "client/coreui/LeftAndMain/LeftAndMain.css";
+import styles from "client/coreui/LeftAndMain/LeftAndMain.css"
 
 interface ModelListResponse {
 	dataModels: DataModel[]
@@ -20,7 +20,7 @@ interface State {
 
 export class LeftAndMain extends React.Component<Props, State> {
 	constructor(props: Props) {
-		super(props);
+		super(props)
 
 		this.state = {
 			error: "",
@@ -29,35 +29,35 @@ export class LeftAndMain extends React.Component<Props, State> {
 	}
 
 	componentDidMount() {
-		this.listDataModels();
+		this.listDataModels()
 	}
 
 	async listDataModels(): Promise<void> {
 		this.setState({
-			error: '',
+			error: "",
 		})
-		let response: ModelListResponse;
+		let response: ModelListResponse
 		try {
-			response = await Fetch.getJSON("/api/model/list");
+			response = await getJSON("/api/model/list")
 		} catch (e) {
 			this.setState({
 				error: String(e),
-			});
-			return;
+			})
+			return
 		}
 		this.setState({
 			dataModels: response.dataModels,
-		});
+		})
 	}
 
 	render() {
 		const {
 			error,
 			dataModels
-		} = this.state;
+		} = this.state
 		const {
 			children,
-		} = this.props;
+		} = this.props
 		return (
 			<React.Fragment>
 				<div className={styles.menuBack}/>

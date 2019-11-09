@@ -5,6 +5,12 @@
 			"client/*": ["client/*"]
 		},
 		"strict": true,
+		// NOTE(Jake): 2019-11-09
+		// Might be worth moving "noUnusedLocals" to only
+		// occur on production builds to avoid dev. friction.
+		// eslint currently gets false positives when importing
+		// types.
+		//
 		"noUnusedLocals": true,
 		"strictBindCallApply": true,
 		"strictFunctionTypes": true,

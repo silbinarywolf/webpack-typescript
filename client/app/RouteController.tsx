@@ -1,23 +1,23 @@
-import React from "react";
+import React from "react"
 import {
 	Route,
 	Redirect,
 	Switch,
-} from "react-router-dom";
+} from "react-router-dom"
 import {
 	BrowserRouter as Router,
-} from "react-router-dom";
+} from "react-router-dom"
 
-import { Routes, FallbackRoute } from "client/routes";
+import { Routes, FallbackRoute } from "client/routes"
 
 export function RouteController(): JSX.Element {
-	const routes = Routes();
+	const routes = Routes()
 	if (routes.length === 0) {
-		throw new Error("No routes are registered.");
+		throw new Error("No routes are registered.")
 	}
 
 	// Build route list
-	let routeElements: JSX.Element[] = [];
+	let routeElements: JSX.Element[] = []
 	for (let route of routes) {
 		routeElements.push(
 			<Route
@@ -31,9 +31,9 @@ export function RouteController(): JSX.Element {
 	}
 
 	// Fallback route
-	const fallbackRoute = FallbackRoute();
+	const fallbackRoute = FallbackRoute()
 	if (!fallbackRoute) {
-		throw new Error("Must configure a FallbackRoute with SetFallbackRoute.");
+		throw new Error("Must configure a FallbackRoute with SetFallbackRoute.")
 	}
 
 	return (
@@ -43,7 +43,7 @@ export function RouteController(): JSX.Element {
 					path="/"
 					exact
 				>
-					<Redirect to={typeof routes[0].path === 'string' ? routes[0].path : ''} />
+					<Redirect to={typeof routes[0].path === "string" ? routes[0].path : ""} />
 				</Route>
 				{routeElements}
 				<Route
@@ -52,5 +52,5 @@ export function RouteController(): JSX.Element {
 				/>
 			</Switch>
 		</Router>
-	);
+	)
 }

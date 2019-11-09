@@ -1,11 +1,11 @@
-import React from "react";
+import React from "react"
 
-import styles from "client/form/FieldHolder/FieldHolder.css";
+import styles from "client/form/FieldHolder/FieldHolder.css"
 
 interface Props {
-	id: string;
-	label: string;
-	message?: string;
+    id: string;
+    label: string;
+    message?: string;
 }
 
 export function FieldHolder(props: React.PropsWithChildren<Props>): JSX.Element {
@@ -14,7 +14,7 @@ export function FieldHolder(props: React.PropsWithChildren<Props>): JSX.Element 
 		label,
 		message,
 		children,
-	} = props;
+	} = props
 	return (
 		<div>
 			<label

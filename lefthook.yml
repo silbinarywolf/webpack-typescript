@@ -2,20 +2,17 @@ fixer:
   parallel: true
   commands:
     backend-fixer:
-      tags: backend style
+      tags: backend format
       glob: "*.go"
-      files: git diff --name-only HEAD @{push}
       run: go fmt {staged_files}
     frontend-logic-fixer:
-      tags: frontend style
+      tags: frontend format
       glob: "{*.ts,*.tsx,*.js,*.jsx}"
       exclude: ".eslintrc.js"
-      files: git diff --name-only HEAD @{push}
       run: eslint --fix {staged_files}
-    frontend-css-fixer:
-      tags: frontend style
+    frontend-style-fixer:
+      tags: frontend format
       glob: "*.css"
-      files: git diff --name-only HEAD @{push}
       run: stylelint --fix {staged_files}
 
 build:

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	dynamicstruct "github.com/Ompluscator/dynamic-struct"
 	"github.com/silbinarywolf/webpack-typescript/server/internal/datatype"
 )
 
@@ -23,16 +24,21 @@ var (
 	hasLoaded bool
 )
 
+type Record interface{}
+
+type RecordSlice interface{}
+
 type DataModelField struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Readonly bool   `json:"readonly"`
 }
 
 type DataModel struct {
-	Name         string            `json:"name"`
-	Fields       []*DataModelField `json:"fields"`
-	fieldMap     map[string]*DataModelField
-	newRecordMap map[string]interface{}
+	Name     string            `json:"name"`
+	Fields   []*DataModelField `json:"fields"`
+	typeInfo dynamicstruct.DynamicStruct
+	fieldMap map[string]*DataModelField
 }
 
 func (dataModel *DataModel) FieldByName(name string) (*DataModelField, bool) {
@@ -47,16 +53,12 @@ func (dataModel *DataModel) HasFieldByName(name string) bool {
 
 // NewRecord will create a new map object based on the model of
 // the data
-func (dataModel *DataModel) NewRecord() map[string]interface{} {
-	record := make(map[string]interface{})
-	for name, value := range dataModel.newRecordMap {
-		record[name] = value
-	}
-	return record
+func (dataModel *DataModel) NewRecord() Record {
+	return dataModel.typeInfo.New().(Record)
 }
 
-func (dataModel *DataModel) MarshalRecordJSON(record map[string]interface{}) ([]byte, error) {
-	// todo: This or use https://github.com/Ompluscator/dynamic-struct
+func (dataModel *DataModel) NewSliceOfRecords() RecordSlice {
+	return dataModel.typeInfo.NewSliceOfStructs()
 }
 
 func LoadAll() {
@@ -175,21 +177,32 @@ func decodeAndValidateModel(path string) (DataModel, error) {
 				return emptyModel, errors.New(dataModel.Name + ": " + reservedNameError)
 			}
 			reservedField := &DataModelField{
-				Name: "ID",
-				Type: "int64",
+				Name:     "ID",
+				Type:     datatype.Int64,
+				Readonly: true,
 			}
 			reservedFields = append(reservedFields, reservedField)
 			dataModel.fieldMap[reservedField.Name] = reservedField
 		}
+
 		dataModel.Fields = append(reservedFields, dataModel.Fields...)
 	}
-	// Create default new record structure
+	// Build struct type
 	{
-		data, err := createNewRecord(dataModel)
-		if err != nil {
+		var invalidFields []*DataModelField
+		structType := dynamicstruct.NewStruct()
+		for _, field := range dataModel.Fields {
+			typeInfo, ok := datatype.Get(field.Type)
+			if !ok {
+				invalidFields = append(invalidFields, field)
+				continue
+			}
+			structType.AddField(field.Name, typeInfo.ZeroValue(), `json:"`+field.Name+`"`)
+		}
+		if err := InvalidFieldsToError(invalidFields); err != nil {
 			return emptyModel, err
 		}
-		dataModel.newRecordMap = data
+		dataModel.typeInfo = structType.Build()
 	}
 
 	return dataModel, nil

@@ -23,11 +23,11 @@ var (
 )
 
 type FormModel struct {
-	Fields  []FieldModel `json:"fields"`
-	Actions []FieldModel `json:"actions"`
+	Fields  []FormFieldModel `json:"fields"`
+	Actions []FormFieldModel `json:"actions"`
 }
 
-type FieldModel struct {
+type FormFieldModel struct {
 	Type  string `json:"type"`
 	Name  string `json:"name"`
 	Label string `json:"label"`
@@ -38,13 +38,13 @@ type ModelListResponse struct {
 }
 
 type RecordGetResponse struct {
-	FormModel FormModel              `json:"formModel"`
-	Data      map[string]interface{} `json:"data"`
+	FormModel FormModel     `json:"formModel"`
+	Data      schema.Record `json:"data"`
 }
 
 type RecordListResponse struct {
-	DataModel schema.DataModel         `json:"dataModel"`
-	Data      []map[string]interface{} `json:"data"`
+	DataModel schema.DataModel `json:"dataModel"`
+	Data      []schema.Record  `json:"data"`
 }
 
 type RecordSaveResponse struct {
@@ -113,8 +113,12 @@ func createFormModel(dataModel schema.DataModel) (FormModel, error) {
 			invalidFields = append(invalidFields, field)
 			continue
 		}
-		res.Fields = append(res.Fields, FieldModel{
-			Type:  typeInfo.FormFieldModel(), // "TextField",
+		formFieldModel := typeInfo.FormFieldModel()
+		if field.Readonly {
+			formFieldModel = "HiddenField"
+		}
+		res.Fields = append(res.Fields, FormFieldModel{
+			Type:  formFieldModel, // ie. "TextField",
 			Name:  field.Name,
 			Label: field.Name,
 		})
@@ -123,7 +127,7 @@ func createFormModel(dataModel schema.DataModel) (FormModel, error) {
 		return FormModel{}, err
 	}
 	if len(res.Actions) == 0 {
-		res.Actions = append(res.Actions, FieldModel{
+		res.Actions = append(res.Actions, FormFieldModel{
 			Type:  "Button",
 			Name:  "Edit",
 			Label: "Save",
@@ -206,7 +210,7 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.Da
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	var data map[string]interface{}
+	var data schema.Record
 	err = json.Unmarshal(bytes, &data)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -238,7 +242,7 @@ func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 	}
 
 	// Load all records
-	list := make([]map[string]interface{}, 0)
+	list := make([]schema.Record, 0)
 	dir := "assets/.db/" + dataModel.Name
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		pathList := make([]string, 0, 100)
@@ -262,7 +266,7 @@ func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 				http.Error(w, err.Error(), 500)
 				return
 			}
-			var res map[string]interface{}
+			var res schema.Record
 			err = json.Unmarshal(data, &res)
 			if err != nil {
 				http.Error(w, err.Error(), 500)

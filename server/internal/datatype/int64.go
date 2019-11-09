@@ -1,6 +1,8 @@
 package datatype
 
-type int64FieldType struct {}
+const Int64 = "int64"
+
+type int64FieldType struct{}
 
 func init() {
 	Register(int64FieldType{})

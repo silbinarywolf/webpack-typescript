@@ -1,0 +1,66 @@
+fixer:
+  parallel: true
+  commands:
+    backend-fixer:
+      tags: backend style
+      glob: "*.go"
+      files: git diff --name-only HEAD @{push}
+      run: go fmt {staged_files}
+    frontend-logic-fixer:
+      tags: frontend style
+      glob: "{*.ts,*.tsx,*.js,*.jsx}"
+      exclude: ".eslintrc.js"
+      files: git diff --name-only HEAD @{push}
+      run: eslint --fix {staged_files}
+    frontend-css-fixer:
+      tags: frontend style
+      glob: "*.css"
+      files: git diff --name-only HEAD @{push}
+      run: stylelint --fix {staged_files}
+
+build:
+  parallel: true
+  commands:
+    frontend-build:
+      tags: frontend build
+      # NOTE(Jake): 2019-11-09
+      # Check yarn.lock / package.json
+      glob: "{*.ts,*.tsx,*.js,*.jsx,*.css,*.html,package.json,yarn.lock}"
+      files: git diff --name-only HEAD @{push}
+      run: yarn build
+    backend-build:
+      tags: backend build
+      glob: "*.go"
+      files: git diff --name-only HEAD @{push}
+      run: go build
+
+test:
+  parallel: true
+  commands:
+    backend-test:
+      tags: backend test
+      files: git diff --name-only HEAD @{push}
+      glob: "*.go"
+      run: go test ./...
+    frontend-test:
+      tags: frontend test
+      files: git diff --name-only HEAD @{push}
+      glob: "{*.ts,*.tsx,*.js,*.jsx,*.css,*.html}"
+      # NOTE(Jake): 2019-11-09
+      # On Windows, not running in band is 2x slower.
+      run: yarn test --runInBand
+
+pre-commit:
+  piped: true
+  commands:
+    fixer:
+      run: lefthook run fixer
+    build:
+      run: lefthook run build
+    test:
+      run: lefthook run test
+    frontend-audit:
+      tags: frontend security
+      files: git diff --name-only HEAD @{push}
+      glob: "{package.json,yarn.lock}"
+      run: yarn audit

@@ -7,15 +7,20 @@ interface FetchState {
  * can be caught and handled specifically with (instanceof FetchError).
  */
 export class FetchError extends Error {
-	private readonly error: Error | undefined;
-
 	// todo(Jake): 2019-11-09
 	// Maybe generate a timestamp?
 	// private readonly timestamp: string // "2019-05-03T23:59:52.103"
 
 	constructor(message: string, error: Error | undefined) {
+		if (message === "" && error) {
+			message = error.message
+		}
 		super(message)
-		this.error = error
+		// Maintains proper stack trace (only on V8)
+		// (Took this snippet from: https://stackoverflow.com/a/52461437/5013410)
+		if (Error.captureStackTrace) {
+			Error.captureStackTrace(this, FetchError)
+		}
 	}
 }
 

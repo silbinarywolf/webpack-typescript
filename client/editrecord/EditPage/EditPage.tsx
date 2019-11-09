@@ -135,7 +135,7 @@ export default class EditPage extends React.Component<Props, State> {
 		return response.data
 	}
 
-	async saveRecord(actionName: string): Promise<FormRecord> {
+	async saveRecord(actionName: string): Promise<FormRecord | undefined> {
 		if (actionName === "") {
 			throw new Error("Cannot submit with blank actionName.")
 		}

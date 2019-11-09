@@ -1,19 +1,52 @@
-fixer:
-  parallel: true
+fix:
+  # NOTE(Jake): 2019-11-09
+  # Disabling CSS/TS parts of fixing must be piped
+  # or else where errors occur within stylelint like:
+  # - Error: No configuration provided for D:\wamp64\www\webpack-typescript\custom.d.ts
+  piped: true
   commands:
     backend-fixer:
       tags: backend format
       glob: "*.go"
       run: go fmt {staged_files}
+    frontend-style-fixer:
+      tags: frontend format
+      glob: "{*.css}"
+      files: git diff --name-only HEAD @{push}
+      run: stylelint --fix {staged_files}
     frontend-logic-fixer:
       tags: frontend format
       glob: "{*.ts,*.tsx,*.js,*.jsx}"
-      exclude: ".eslintrc.js"
+      files: git diff --name-only HEAD @{push}
+      exclude: ".eslintrc.js|.stylelint.js|custom.d.ts"
       run: eslint --fix {staged_files}
+
+
+lint:
+  # NOTE(Jake): 2019-11-09
+  # Disabling CSS/TS parts of fixing must be piped
+  # or else where errors occur within stylelint like:
+  # - Error: No configuration provided for D:\wamp64\www\webpack-typescript\custom.d.ts
+  piped: true
+  commands:
+    # NOTE(Jake): 2019-11-09
+    # Gofmt has no verification functionality and apparently
+    # Gofmt changes across Go versions
+    # backend-fixer:
+    #   tags: backend format
+    #   glob: "*.go"
+    #   run: go fmt {staged_files}
     frontend-style-fixer:
       tags: frontend format
-      glob: "*.css"
-      run: stylelint --fix {staged_files}
+      glob: "{*.css}"
+      files: git diff --name-only HEAD @{push}
+      run: stylelint {staged_files}
+    frontend-logic-fixer:
+      tags: frontend format
+      glob: "{*.ts,*.tsx,*.js,*.jsx}"
+      files: git diff --name-only HEAD @{push}
+      exclude: ".eslintrc.js|.stylelint.js|custom.d.ts"
+      run: eslint {staged_files}
 
 build:
   parallel: true
@@ -50,8 +83,8 @@ test:
 pre-commit:
   piped: true
   commands:
-    fixer:
-      run: lefthook run fixer
+    fix:
+      run: lefthook run fix
     build:
       run: lefthook run build
     test:

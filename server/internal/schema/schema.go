@@ -55,11 +55,15 @@ func (dataModel *DataModel) NewRecord() map[string]interface{} {
 	return record
 }
 
+func (dataModel *DataModel) MarshalRecordJSON(record map[string]interface{}) ([]byte, error) {
+	// todo: This or use https://github.com/Ompluscator/dynamic-struct
+}
+
 func LoadAll() {
 	if hasLoaded {
 		panic("Cannot call LoadAll() more than once.")
 	}
-	hasLoaded = true;
+	hasLoaded = true
 
 	fileList := make([]string, 0)
 	e := filepath.Walk("assets/.model", func(path string, f os.FileInfo, err error) error {
@@ -96,24 +100,24 @@ func DataModels() []DataModel {
 	return modelList
 }
 
-func CreateNewRecord(dataModel DataModel) (map[string]interface{}, error) {
+func createNewRecord(dataModel DataModel) (map[string]interface{}, error) {
 	var invalidFields []*DataModelField
 	data := make(map[string]interface{})
 	for _, field := range dataModel.Fields {
 		typeInfo, ok := datatype.Get(field.Type)
 		if !ok {
 			invalidFields = append(invalidFields, field)
-			continue;
+			continue
 		}
-		data[field.Name] = typeInfo.ZeroValue();
+		data[field.Name] = typeInfo.ZeroValue()
 	}
 	if err := InvalidFieldsToError(invalidFields); err != nil {
-		return nil, err;
+		return nil, err
 	}
 	return data, nil
 }
 
-func InvalidFieldsToError(invalidFields []*DataModelField) (error) {
+func InvalidFieldsToError(invalidFields []*DataModelField) error {
 	if len(invalidFields) == 0 {
 		return nil
 	}
@@ -181,7 +185,7 @@ func decodeAndValidateModel(path string) (DataModel, error) {
 	}
 	// Create default new record structure
 	{
-		data, err := CreateNewRecord(dataModel)
+		data, err := createNewRecord(dataModel)
 		if err != nil {
 			return emptyModel, err
 		}

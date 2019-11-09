@@ -24,10 +24,6 @@ var (
 	hasLoaded bool
 )
 
-type Record interface{}
-
-type RecordSlice interface{}
-
 type DataModelField struct {
 	Name     string `json:"name"`
 	Type     string `json:"type"`
@@ -53,11 +49,11 @@ func (dataModel *DataModel) HasFieldByName(name string) bool {
 
 // NewRecord will create a new map object based on the model of
 // the data
-func (dataModel *DataModel) NewRecord() Record {
-	return dataModel.typeInfo.New().(Record)
+func (dataModel *DataModel) NewRecord() interface{} {
+	return dataModel.typeInfo.New()
 }
 
-func (dataModel *DataModel) NewSliceOfRecords() RecordSlice {
+func (dataModel *DataModel) NewSliceOfRecords() interface{} {
 	return dataModel.typeInfo.NewSliceOfStructs()
 }
 

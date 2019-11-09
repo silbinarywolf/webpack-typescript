@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -38,13 +39,13 @@ type ModelListResponse struct {
 }
 
 type RecordGetResponse struct {
-	FormModel FormModel     `json:"formModel"`
-	Data      schema.Record `json:"data"`
+	FormModel FormModel   `json:"formModel"`
+	Data      interface{} `json:"data"`
 }
 
 type RecordListResponse struct {
 	DataModel schema.DataModel `json:"dataModel"`
-	Data      []schema.Record  `json:"data"`
+	Data      interface{}      `json:"data"`
 }
 
 type RecordSaveResponse struct {
@@ -210,15 +211,13 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.Da
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	var data schema.Record
-	err = json.Unmarshal(bytes, &data)
+	res := RecordGetResponse{}
+	err = json.Unmarshal(bytes, &res.Data)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	res := RecordGetResponse{}
 	res.FormModel = formModel
-	res.Data = data
 	jsonOutput, err := json.Marshal(&res)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -242,7 +241,7 @@ func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 	}
 
 	// Load all records
-	list := make([]schema.Record, 0)
+	list := reflect.ValueOf(dataModel.NewSliceOfRecords()).Elem()
 	dir := "assets/.db/" + dataModel.Name
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		pathList := make([]string, 0, 100)
@@ -266,19 +265,19 @@ func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 				http.Error(w, err.Error(), 500)
 				return
 			}
-			var res schema.Record
-			err = json.Unmarshal(data, &res)
+			record := dataModel.NewRecord()
+			err = json.Unmarshal(data, &record)
 			if err != nil {
 				http.Error(w, err.Error(), 500)
 				return
 			}
-			list = append(list, res)
+			list = reflect.Append(list, reflect.ValueOf(record).Elem())
 		}
 	}
 
 	res := RecordListResponse{}
 	res.DataModel = dataModel
-	res.Data = list
+	res.Data = list.Interface()
 	jsonOutput, err := json.Marshal(&res)
 	if err != nil {
 		http.Error(w, err.Error(), 500)

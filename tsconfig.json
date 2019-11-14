@@ -12,6 +12,7 @@
 		// types.
 		//
 		"noUnusedLocals": true,
+		"noImplicitAny": true,
 		"strictBindCallApply": true,
 		"strictFunctionTypes": true,
 		"strictPropertyInitialization": true,

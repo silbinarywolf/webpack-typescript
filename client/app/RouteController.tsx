@@ -8,17 +8,17 @@ import {
 	BrowserRouter as Router,
 } from "react-router-dom"
 
-import { Routes, FallbackRoute } from "client/routes"
+import { routes } from "client/routes"
 
 export function RouteController(): JSX.Element {
-	const routes = Routes()
-	if (routes.length === 0) {
+	const routeList = routes.Routes()
+	if (routeList.length === 0) {
 		throw new Error("No routes are registered.")
 	}
 
 	// Build route list
 	let routeElements: JSX.Element[] = []
-	for (let route of routes) {
+	for (let route of routeList) {
 		routeElements.push(
 			<Route
 				key={route.path}
@@ -31,7 +31,7 @@ export function RouteController(): JSX.Element {
 	}
 
 	// Fallback route
-	const fallbackRoute = FallbackRoute()
+	const fallbackRoute = routes.FallbackRoute()
 	if (!fallbackRoute) {
 		throw new Error("Must configure a FallbackRoute with SetFallbackRoute.")
 	}
@@ -43,7 +43,7 @@ export function RouteController(): JSX.Element {
 					path="/"
 					exact
 				>
-					<Redirect to={typeof routes[0].path === "string" ? routes[0].path : ""} />
+					<Redirect to={typeof routeList[0].path === "string" ? routeList[0].path : ""} />
 				</Route>
 				{routeElements}
 				<Route

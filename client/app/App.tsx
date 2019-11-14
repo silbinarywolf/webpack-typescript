@@ -8,22 +8,21 @@ import "client/coreui/ListReset/ListReset.css"
 import { Header } from "client/coreui/Header/Header"
 import { LeftAndMain } from "client/coreui/LeftAndMain/LeftAndMain"
 import { ErrorBoundary } from "client/coreui/ErrorBoundary/ErrorBoundary"
-import { setBaseUrl, baseUrl } from "client/fetch/fetch"
+import { http } from "client/http"
 import { RouteController } from "client/app/RouteController"
 import { Loading } from "client/coreui/Loading/Loading"
 
 // Register pages
-import "client/coreui/DashboardPage/register"
-import "client/editrecord/ListPage/register"
-import "client/editrecord/EditPage/register"
-import "client/errorpage/ErrorPage/register"
+import "client/dashboardpage"
+import "client/editrecord"
+import "client/errorpage"
 
 export function StartApp() {
 	if (process.env.NODE_ENV !== "production") {
 		console.warn("This is a development mode build.")
 	}
-	if (baseUrl() === "") {
-		setBaseUrl("http://localhost:8080")
+	if (http.BaseUrl() === "") {
+		http.SetBaseUrl("http://localhost:8080");
 	}
 
 	ReactDOM.render(

@@ -1,8 +1,8 @@
 import React from "react"
 
 import { DataModel } from "client/models/DataModel"
-import { getJSON } from "client/fetch/fetch"
-import { generateAdminURL } from "client/routes"
+import { http } from "client/http"
+import { routes } from "client/routes"
 
 import styles from "client/coreui/LeftAndMain/LeftAndMain.css"
 
@@ -36,9 +36,9 @@ export class LeftAndMain extends React.Component<Props, State> {
 		this.setState({
 			error: "",
 		})
-		let response: ModelListResponse
+		let response;
 		try {
-			response = await getJSON("/api/model/list")
+			response = await http.Get<ModelListResponse>("/api/model/list")
 		} catch (e) {
 			this.setState({
 				error: String(e),
@@ -70,7 +70,7 @@ export class LeftAndMain extends React.Component<Props, State> {
 							return (
 								<li key={dataModel.name}>
 									<a
-										href={generateAdminURL("/data/:model", {
+										href={routes.GenerateAdminURL("/data/:model", {
 											model: dataModel.name,
 										})}
 										className={styles.menuLink}

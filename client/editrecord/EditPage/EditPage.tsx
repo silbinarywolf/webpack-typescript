@@ -7,19 +7,19 @@ import {
 	FormRecord,
 } from "client/form/Form/Form"
 import { Loading } from "client/coreui/Loading/Loading"
-import { getJSON, postJSON } from "client/fetch/fetch"
+import { http } from "client/http"
 import { EditPageURL } from "client/editrecord/EditPage/register"
-import { generateAdminURL } from "client/routes"
+import { routes } from "client/routes"
 
 interface RecordGetResponse {
 	formModel: FormModel
-	data: FormRecord
+	data: FormRecord | undefined
 }
 
 interface State {
 	isSubmitting: boolean;
 	error: string;
-	/**generateURL
+	/**
 	 * loadedRecord is the record when it's state
 	 * was loaded from the API endpoint.
 	 */
@@ -88,7 +88,7 @@ export default class EditPage extends React.Component<Props, State> {
 					record: record,
 				})
 				if (isNewRecord) {
-					this.props.history.push(generateAdminURL(EditPageURL, {
+					this.props.history.push(routes.GenerateAdminURL(EditPageURL, {
 						id: record["ID"],
 						model: this.props.match.params.model,
 					}))
@@ -117,7 +117,7 @@ export default class EditPage extends React.Component<Props, State> {
 		})
 		let response: RecordGetResponse
 		try {
-			response = await getJSON("/api/record/:model/Get/:id", {
+			response = await http.Get("/api/record/:model/Get/:id", {
 				model: this.props.match.params.model,
 				id: id,
 			})
@@ -152,9 +152,9 @@ export default class EditPage extends React.Component<Props, State> {
 			}
 			id = recordID
 		}
-		let res: ModelResponse
+		let res;
 		try {
-			res = await postJSON<ModelResponse>(
+			res = await http.Post<ModelResponse>(
 				"/api/record/:model/:actionName/:id",
 				{
 					model: this.props.match.params.model,

@@ -1,7 +1,7 @@
 import React from "react"
 import { RouteComponentProps } from "react-router"
 
-import { getJSON } from "client/fetch/fetch"
+import { http } from "client/http"
 import { FormRecord } from "client/form/Form/Form"
 import { DataModel } from "client/models/DataModel"
 
@@ -9,7 +9,7 @@ import styles from "client/editrecord/ListPage/ListPage.css"
 
 interface RecordListResponse {
 	dataModel: DataModel
-	data: FormRecord[]
+	data: FormRecord[] | undefined
 }
 
 interface State {
@@ -43,9 +43,9 @@ export default class ListPage extends React.Component<Props, State> {
 		this.setState({
 			error: "",
 		})
-		let response: RecordListResponse
+		let response;
 		try {
-			response = await getJSON("/api/record/:model/List", {
+			response = await http.Get<RecordListResponse>("/api/record/:model/List", {
 				model: this.props.match.params.model,
 			})
 		} catch (e) {
@@ -56,7 +56,7 @@ export default class ListPage extends React.Component<Props, State> {
 		}
 		this.setState({
 			dataModel: response.dataModel,
-			list: response.data,
+			list: response.data ? response.data : [],
 		})
 	}
 

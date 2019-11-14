@@ -1,7 +1,7 @@
-import { buildUriAndParams } from "./fetch"
+import { http } from "./http"
 
 test("Test simple interpolation and query params", () => {
-	let uri = buildUriAndParams("/api/Edit/Page/:id", {
+	let uri = http.buildUriAndParams("/api/Edit/Page/:id", {
 		id: 1,
 		queryParam: "test",
 	})
@@ -9,7 +9,7 @@ test("Test simple interpolation and query params", () => {
 })
 
 test("Test encoding of interpolation and query params", () => {
-	let uri = buildUriAndParams("/api/Edit/Page/:id", {
+	let uri = http.buildUriAndParams("/api/Edit/Page/:id", {
 		id: "id_with/_/_two_slashes",
 		queryParam: "test_&with&_two_ampersands",
 	})
@@ -21,7 +21,7 @@ test("Dont mutate given JS Object", () => {
 		id: 1,
 		queryParam: "test",
 	}
-	buildUriAndParams("/api/Edit/Page/:id", originalParams)
+	http.buildUriAndParams("/api/Edit/Page/:id", originalParams)
 	if (!originalParams) {
 		expect(originalParams).toBeTruthy()
 		return

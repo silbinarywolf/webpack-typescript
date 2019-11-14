@@ -45,7 +45,7 @@ export default class ListPage extends React.Component<Props, State> {
 		})
 		let response;
 		try {
-			response = await http.Get<RecordListResponse>("/api/record/:model/List", {
+			response = await http.Get<RecordListResponse>("/api/record/:model/list", {
 				model: this.props.match.params.model,
 			})
 		} catch (e) {

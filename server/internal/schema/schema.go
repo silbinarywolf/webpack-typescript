@@ -25,13 +25,21 @@ var (
 )
 
 type DataModelField struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	Readonly bool   `json:"readonly"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+	/**
+	 * Readonly field can only be written when the record is
+	 * inserted. This is used by unique IDs or created time fields.
+	 */
+	Readonly bool `json:"readonly"`
 }
 
 type DataModel struct {
-	Name     string            `json:"name"`
+	// todo(Jake): 2019-11-14
+	// change json:name to something else.  What we really
+	// need is like API name for the frontend, which might not
+	// necessarily be the table name.
+	Table    string            `json:"name"`
 	Fields   []*DataModelField `json:"fields"`
 	typeInfo dynamicstruct.DynamicStruct
 	fieldMap map[string]*DataModelField
@@ -81,13 +89,14 @@ func LoadAll() {
 		if err != nil {
 			panic(err)
 		}
-		model.Name = filepath.Base(path)
-		model.Name = strings.TrimSuffix(model.Name, filepath.Ext(model.Name))
-		if _, ok := modelMap[model.Name]; ok {
-			panic("Cannot define same model twice: " + model.Name + ", " + path)
+		model.Table = filepath.Base(path)
+		model.Table = strings.TrimSuffix(model.Table, filepath.Ext(model.Table))
+		model.Table = strings.ToLower(model.Table)
+		if _, ok := modelMap[model.Table]; ok {
+			panic("Cannot define same model twice: " + model.Table + ", " + path + "\n\nModel names are case-insensitive")
 		}
 		modelList = append(modelList, model)
-		modelMap[model.Name] = &modelList[len(modelList)-1]
+		modelMap[model.Table] = &modelList[len(modelList)-1]
 	}
 }
 
@@ -131,9 +140,9 @@ func InvalidFieldsToError(invalidFields []*DataModelField) error {
 	return errors.New(errorMessage)
 }
 
-func decodeAndValidateModel(path string) (DataModel, error) {
+func decodeAndValidateModel(filename string) (DataModel, error) {
 	var emptyModel DataModel
-	file, err := os.Open(path)
+	file, err := os.Open(filename)
 	defer file.Close()
 	if err != nil {
 		return emptyModel, err
@@ -150,12 +159,19 @@ func decodeAndValidateModel(path string) (DataModel, error) {
 	if err := parser.Decode(&dataModel); err != nil {
 		return emptyModel, err
 	}
+	table := dataModel.Table
+	// Validate model name
+	{
+		if table != "" {
+			return emptyModel, errors.New(table + ": Must omit \"Name\" field. This is inferred from the filename")
+		}
+	}
 	// Validate that there are no duplicates
 	{
 		fieldMap := make(map[string]*DataModelField)
 		for _, field := range dataModel.Fields {
 			if _, ok := fieldMap[field.Name]; ok {
-				return emptyModel, errors.New(dataModel.Name + ": cannot define field on model twice.")
+				return emptyModel, errors.New(table + ": cannot define field on model twice.")
 			}
 			fieldMap[field.Name] = field
 		}
@@ -170,11 +186,11 @@ func decodeAndValidateModel(path string) (DataModel, error) {
 		// Add ID
 		{
 			if dataModel.HasFieldByName("ID") {
-				return emptyModel, errors.New(dataModel.Name + ": " + reservedNameError)
+				return emptyModel, errors.New(table + ": " + reservedNameError)
 			}
 			reservedField := &DataModelField{
 				Name:     "ID",
-				Type:     datatype.Int64,
+				Type:     datatype.Uint64,
 				Readonly: true,
 			}
 			reservedFields = append(reservedFields, reservedField)

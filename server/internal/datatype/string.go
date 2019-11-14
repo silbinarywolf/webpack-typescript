@@ -1,13 +1,15 @@
 package datatype
 
-type stringFieldType struct {}
+const String = "string"
+
+type stringFieldType struct{}
 
 func init() {
 	Register(stringFieldType{})
 }
 
 func (fieldType stringFieldType) Identifier() string {
-	return "string"
+	return String
 }
 
 func (fieldType stringFieldType) FormFieldModel() string {

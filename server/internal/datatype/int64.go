@@ -9,7 +9,7 @@ func init() {
 }
 
 func (fieldType int64FieldType) Identifier() string {
-	return "int64"
+	return Int64
 }
 
 func (fieldType int64FieldType) FormFieldModel() string {

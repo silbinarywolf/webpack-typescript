@@ -9,11 +9,13 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/silbinarywolf/webpack-typescript/server/internal/datatype"
-	"github.com/silbinarywolf/webpack-typescript/server/internal/db"
 	"github.com/silbinarywolf/webpack-typescript/server/internal/schema"
 )
 
@@ -36,23 +38,19 @@ type ModelListResponse struct {
 	DataModels []schema.DataModel `json:"dataModels"`
 }
 
-type ResponseWithData struct {
-	Data interface{} `json:"data"`
-}
-
 type RecordGetResponse struct {
-	ResponseWithData
-	FormModel FormModel `json:"formModel"`
+	FormModel FormModel   `json:"formModel"`
+	Data      interface{} `json:"data"`
 }
 
 type RecordListResponse struct {
-	ResponseWithData
 	DataModel schema.DataModel `json:"dataModel"`
+	Data      interface{}      `json:"data"`
 }
 
 type RecordSaveResponse struct {
-	ResponseWithData
-	Errors map[string]string `json:"errors"`
+	Data   map[string]interface{} `json:"data"`
+	Errors map[string]string      `json:"errors"`
 }
 
 func Start() {
@@ -66,36 +64,35 @@ func Start() {
 	// TODO(Jake): 2019-11-07
 	// Add logic here to validate against field types. DataModel + Field Type should
 	// not clash.
-	/*for _, dataModel := range dataModels {
-		datatype.Get(dataModel.Name)
+	for _, dataModel := range dataModels {
 		r, _ := utf8.DecodeRuneInString(dataModel.Name[0:])
 		if !unicode.IsUpper(r) {
 			panic("Invalid DataModel, must start with a capital letter: " + dataModel.Name)
 		}
-	}*/
+	}
 
 	http.HandleFunc("/api/model/list", func(w http.ResponseWriter, r *http.Request) {
 		ModelListModelHandler(w, r, dataModels)
 	})
 	for _, dataModel := range dataModels {
 		dataModel := dataModel
+		name := dataModel.Name
 		formModel, err := createFormModel(dataModel)
 		if err != nil {
 			// TODO(jake): 2019-10-27
 			// make this error message nicer
-			fmt.Printf("An error occurred building form model from data model: %s\n%s", dataModel.Table, err)
+			fmt.Printf("An error occurred building form model from data model: %s\n%s", name, err)
 			os.Exit(0)
 		}
 
-		apiName := dataModel.Table
-		http.HandleFunc("/api/record/"+apiName+"/list", func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/api/record/"+name+"/List", func(w http.ResponseWriter, r *http.Request) {
 			ListModelHandler(w, r, dataModel)
 		})
-		http.HandleFunc("/api/record/"+apiName+"/get/", func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/api/record/"+name+"/Get/", func(w http.ResponseWriter, r *http.Request) {
 			GetModelHandler(w, r, dataModel, formModel)
 		})
-		http.HandleFunc("/api/record/"+apiName+"/update/", func(w http.ResponseWriter, r *http.Request) {
-			UpdateModelHandler(w, r, dataModel, formModel)
+		http.HandleFunc("/api/record/"+name+"/Edit/", func(w http.ResponseWriter, r *http.Request) {
+			EditModelHandler(w, r, dataModel, formModel)
 		})
 	}
 	fmt.Printf("Starting server on :8080...\n")
@@ -133,7 +130,7 @@ func createFormModel(dataModel schema.DataModel) (FormModel, error) {
 	if len(res.Actions) == 0 {
 		res.Actions = append(res.Actions, FormFieldModel{
 			Type:  "Button",
-			Name:  "update",
+			Name:  "Edit",
 			Label: "Save",
 		})
 	}
@@ -189,11 +186,6 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.Da
 		http.Error(w, "Please send a "+http.MethodGet+" request", 400)
 		return
 	}
-
-	res := RecordGetResponse{}
-	res.Data = dataModel.NewRecord()
-	res.FormModel = formModel
-
 	// Parse ID
 	newID, err := parseIdFromURL(r.URL.Path)
 	if err != nil {
@@ -202,6 +194,9 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.Da
 	}
 	if newID == 0 {
 		// New record
+		res := RecordGetResponse{}
+		res.FormModel = formModel
+		res.Data = dataModel.NewRecord()
 		jsonOutput, err := json.Marshal(&res)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
@@ -210,11 +205,19 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.Da
 		w.Write(jsonOutput)
 		return
 	}
-	err = db.GetByID(dataModel.Table, strconv.FormatUint(newID, 10), &res.Data)
+	path := "assets/.db/" + dataModel.Name + "/" + strconv.FormatUint(newID, 10) + ".json"
+	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	res := RecordGetResponse{}
+	err = json.Unmarshal(bytes, &res.Data)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	res.FormModel = formModel
 	jsonOutput, err := json.Marshal(&res)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -237,15 +240,44 @@ func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 		return
 	}
 
+	// Load all records
+	list := reflect.ValueOf(dataModel.NewSliceOfRecords()).Elem()
+	dir := "assets/.db/" + dataModel.Name
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		pathList := make([]string, 0, 100)
+		err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+			if filepath.Ext(path) == ".json" {
+				pathList = append(pathList, path)
+			}
+			return err
+		})
+		if err != nil {
+			http.Error(w, "Error loading list of records from directory: "+err.Error(), 500)
+			return
+		}
+		// Sort alphabetically
+		sort.Slice(pathList[:], func(i, j int) bool {
+			return pathList[i] < pathList[j]
+		})
+		for _, path := range pathList {
+			data, err := ioutil.ReadFile(path)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			record := dataModel.NewRecord()
+			err = json.Unmarshal(data, &record)
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			list = reflect.Append(list, reflect.ValueOf(record).Elem())
+		}
+	}
+
 	res := RecordListResponse{}
 	res.DataModel = dataModel
-	res.Data = dataModel.NewSliceOfRecords()
-
-	// Load all records
-	if err := db.GetAll(dataModel, &res.Data); err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
+	res.Data = list.Interface()
 	jsonOutput, err := json.Marshal(&res)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -254,7 +286,7 @@ func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 	w.Write(jsonOutput)
 }
 
-func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.DataModel, formModel FormModel) {
+func EditModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.DataModel, formModel FormModel) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -267,17 +299,14 @@ func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema
 		http.Error(w, "Please send a "+http.MethodPost+" request", 400)
 		return
 	}
-
+	record := make(map[string]interface{})
+	err := json.NewDecoder(r.Body).Decode(&record)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
 	// Validate data against schema
-	/*{
-		// todo(Jake): 2019-11-14
-		// Make this more effecient? Maybe?
-		record := make(map[string]interface{})
-		err := json.NewDecoder(r.Body).Decode(&record)
-		if err != nil {
-			http.Error(w, "Unable to decode record", 400)
-			return
-		}
+	{
 		var invalidFields []string
 		for name, _ := range record {
 			if !dataModel.HasFieldByName(name) {
@@ -290,29 +319,15 @@ func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema
 			for _, name := range invalidFields {
 				fieldStr += "- " + name + "\n"
 			}
-			http.Error(w, "Fields do not exist on \""+dataModel.Table+"\":\n"+fieldStr, 400)
-			return
-		}
-	}*/
-
-	// Decode using dynamic record struct
-	record := dataModel.NewRecord()
-	{
-		decoder := json.NewDecoder(r.Body)
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&record); err != nil {
-			http.Error(w, err.Error(), 400)
+			http.Error(w, "Fields do not exist on \""+dataModel.Name+"\":\n"+fieldStr, 400)
 			return
 		}
 	}
 
 	// Get save directory
-	dir := "assets/.db/" + dataModel.Table
-	dirExists := false
-	{
-		_, err := os.Stat(dir)
-		dirExists = !os.IsNotExist(err)
-	}
+	dir := "assets/.db/" + dataModel.Name
+	_, err = os.Stat(dir)
+	dirExists := !os.IsNotExist(err)
 
 	// Parse ID
 	newID, err := parseIdFromURL(r.URL.Path)
@@ -325,9 +340,9 @@ func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema
 		// Consider using this instead:
 		// - https://github.com/sony/sonyflake
 		if dirExists {
-			err = filepath.Walk(dir, func(filename string, f os.FileInfo, err error) error {
-				if filepath.Ext(filename) == ".json" {
-					idString := filepath.Base(filename)
+			err = filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
+				if filepath.Ext(path) == ".json" {
+					idString := filepath.Base(path)
 					idString = strings.TrimSuffix(idString, filepath.Ext(idString))
 					id, err := strconv.ParseUint(idString, 10, 64)
 					if err != nil {
@@ -351,27 +366,13 @@ func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema
 		}
 	}
 
-	// Set ID
-	{
-		ps := reflect.ValueOf(record).Elem()
-		f := ps.FieldByName("ID")
-		if !f.IsValid() {
-			http.Error(w, "ID is missing on struct", 500)
-			return
-		}
-		if f.OverflowUint(newID) {
-			http.Error(w, "Not allowed to overflow", 500)
-			return
-		}
-		f.SetUint(newID)
-	}
-
 	res := RecordSaveResponse{}
 	res.Data = record
-	/*if title, _ := res.Data["Title"]; title == "" {
+	res.Data["ID"] = newID
+	if title, _ := res.Data["Title"]; title == "" {
 		// Set default Title (testing that values can come from the server)
 		res.Data["Title"] = "New Page Title"
-	}*/
+	}
 	res.Errors = make(map[string]string)
 	{
 		if !dirExists {
@@ -380,7 +381,7 @@ func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema
 		// Write file
 		file, _ := json.MarshalIndent(res.Data, "", "	")
 		idString := strconv.FormatUint(newID, 10)
-		if err := ioutil.WriteFile("assets/.db/"+dataModel.Table+"/"+idString+".json", file, 0644); err != nil {
+		if err := ioutil.WriteFile("assets/.db/"+dataModel.Name+"/"+idString+".json", file, 0644); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}

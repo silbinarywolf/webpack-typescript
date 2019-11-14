@@ -11,7 +11,7 @@ type dataTypeInterface interface {
 }
 
 var (
-	dataTypes []dataTypeInterface
+	dataTypes             []dataTypeInterface
 	dataTypesByIdentifier map[string]dataTypeInterface = make(map[string]dataTypeInterface)
 )
 
@@ -19,6 +19,9 @@ func Register(dataType dataTypeInterface) {
 	ident := dataType.Identifier()
 	if ident == "" {
 		panic("Cannot register data type with Identifier() that returns an empty string")
+	}
+	if _, ok := dataTypesByIdentifier[ident]; ok {
+		panic("Cannot register same data type more than once: " + ident)
 	}
 	dataTypesByIdentifier[ident] = dataType
 	dataTypes = append(dataTypes, dataType)

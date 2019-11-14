@@ -78,7 +78,7 @@ export default class EditPage extends React.Component<Props, State> {
 			const id = this.state.record["ID"]
 			isNewRecord = (id === undefined || id === 0 || id === "")
 		}
-		this.saveRecord(actionName)
+		this.updateRecord(actionName)
 			.then((record) => {
 				if (!record) {
 					return
@@ -117,7 +117,7 @@ export default class EditPage extends React.Component<Props, State> {
 		})
 		let response: RecordGetResponse
 		try {
-			response = await http.Get("/api/record/:model/Get/:id", {
+			response = await http.Get("/api/record/:model/get/:id", {
 				model: this.props.match.params.model,
 				id: id,
 			})
@@ -135,7 +135,7 @@ export default class EditPage extends React.Component<Props, State> {
 		return response.data
 	}
 
-	async saveRecord(actionName: string): Promise<FormRecord | undefined> {
+	async updateRecord(actionName: string): Promise<FormRecord | undefined> {
 		if (actionName === "") {
 			throw new Error("Cannot submit with blank actionName.")
 		}

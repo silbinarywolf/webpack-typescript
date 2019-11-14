@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/silbinarywolf/webpack-typescript/server/internal/assetdir"
 	"github.com/silbinarywolf/webpack-typescript/server/internal/datatype"
 	"github.com/silbinarywolf/webpack-typescript/server/internal/db"
 	"github.com/silbinarywolf/webpack-typescript/server/internal/schema"
@@ -56,6 +58,7 @@ type RecordSaveResponse struct {
 }
 
 func Start() {
+	flag.Parse()
 	schema.LoadAll()
 
 	// TODO(Jake): 2019-10-27
@@ -307,7 +310,7 @@ func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema
 	}
 
 	// Get save directory
-	dir := "assets/.db/" + dataModel.Table
+	dir := filepath.Join(assetdir.DatabaseDir(), dataModel.Table)
 	dirExists := false
 	{
 		_, err := os.Stat(dir)

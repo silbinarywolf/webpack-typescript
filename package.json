@@ -3,7 +3,7 @@
 	"scripts": {
 		"start": "webpack-dev-server",
 		"build": "webpack -p --config webpack.config.ts",
-		"server": "go build && ./webpack-typescript",
+		"server": "go build && ./webpack-typescript -asset=\"testdata/default\"",
 		"test": "jest"
 	},
 	"engines": {

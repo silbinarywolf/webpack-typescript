@@ -1,0 +1,14 @@
+{
+	"Fields": [
+		{
+			"Name": "Title",
+			"Type": "string"
+		}
+	],
+	"Form": [
+		{
+			"Name": "Title",
+			"Type": "TextField"
+		}
+	]
+}

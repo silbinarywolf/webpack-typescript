@@ -5,10 +5,12 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"sort"
 
+	"github.com/silbinarywolf/webpack-typescript/server/internal/assetdir"
 	"github.com/silbinarywolf/webpack-typescript/server/internal/schema"
 )
 
@@ -26,7 +28,7 @@ func GetAll(dataModel schema.DataModel, sliceOfValues *interface{}) error {
 	//}
 
 	// Load all records
-	dir := databaseDir + dataModel.Table
+	dir := path.Join(assetdir.DatabaseDir(), dataModel.Table)
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		fileList := make([]string, 0, 100)
 		err := filepath.Walk(dir, func(filename string, f os.FileInfo, err error) error {
@@ -61,7 +63,7 @@ func GetAll(dataModel schema.DataModel, sliceOfValues *interface{}) error {
 }
 
 func GetByID(table string, id string, v interface{}) error {
-	filename := databaseDir + table + "/" + id + ".json"
+	filename := filepath.Join(assetdir.DatabaseDir(), table, id+".json")
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	dynamicstruct "github.com/Ompluscator/dynamic-struct"
+	"github.com/silbinarywolf/webpack-typescript/server/internal/assetdir"
 	"github.com/silbinarywolf/webpack-typescript/server/internal/datatype"
 )
 
@@ -71,8 +72,14 @@ func LoadAll() {
 	}
 	hasLoaded = true
 
+	dir := assetdir.ModelDir()
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		dir, _ := filepath.Abs(assetdir.ModelDir())
+		panic("Expected folder to exist: " + dir + "\n\nAlternatively, you can point at a different directory with the -" + assetdir.AssetFlag + " flag")
+	}
+
 	fileList := make([]string, 0)
-	e := filepath.Walk("assets/.model", func(path string, f os.FileInfo, err error) error {
+	e := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
 		if filepath.Ext(path) == ".json" {
 			fileList = append(fileList, path)
 		}

@@ -292,7 +292,7 @@ func initAndTypecheckDataModelFields(dataModel *DataModel) error {
 			hasMissingTypes = true
 			continue
 		}
-		structType.AddField(field.Name, typeInfo.ZeroValue(), `json:"`+field.Name+`"`)
+		structType.AddField(field.Name, typeInfo.ZeroValue(), `json:"`+field.Name+`,omitempty"`)
 	}
 	// Show errors
 	if invalidFields.Len() > 0 {

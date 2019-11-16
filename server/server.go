@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -35,7 +36,7 @@ type FormFieldModel struct {
 }
 
 type ModelListResponse struct {
-	DataModels []schema.DataModel `json:"dataModels"`
+	DataModels []*schema.DataModel `json:"dataModels"`
 }
 
 type ResponseWithData struct {
@@ -49,7 +50,7 @@ type RecordGetResponse struct {
 
 type RecordListResponse struct {
 	ResponseWithData
-	DataModel schema.DataModel `json:"dataModel"`
+	DataModel *schema.DataModel `json:"dataModel"`
 }
 
 type RecordSaveResponse struct {
@@ -59,7 +60,12 @@ type RecordSaveResponse struct {
 
 func Start() {
 	flag.Parse()
-	schema.LoadAll()
+
+	if err := schema.LoadAll(); err != nil {
+		fmt.Println(err)
+		os.Exit(0)
+		return
+	}
 
 	// TODO(Jake): 2019-10-27
 	// Maybe a system to watch model files so that schema can be updated on the fly
@@ -84,10 +90,9 @@ func Start() {
 		dataModel := dataModel
 		formModel, err := createFormModel(dataModel)
 		if err != nil {
-			// TODO(jake): 2019-10-27
-			// make this error message nicer
-			fmt.Printf("An error occurred building form model from data model: %s\n%s", dataModel.Table, err)
+			fmt.Printf("Error loading model: %s\n%s", dataModel.Table, err)
 			os.Exit(0)
+			return
 		}
 
 		apiName := dataModel.Table
@@ -111,13 +116,12 @@ func handleCors(w *http.ResponseWriter, req *http.Request) {
 	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 }
 
-func createFormModel(dataModel schema.DataModel) (FormModel, error) {
+func createFormModel(dataModel *schema.DataModel) (FormModel, error) {
 	var res FormModel
-	var invalidFields []*schema.DataModelField
 	for _, field := range dataModel.Fields {
 		typeInfo, ok := datatype.Get(field.Type)
 		if !ok {
-			invalidFields = append(invalidFields, field)
+			panic("Should not happen, should already be valid")
 			continue
 		}
 		formFieldModel := typeInfo.FormFieldModel()
@@ -129,9 +133,6 @@ func createFormModel(dataModel schema.DataModel) (FormModel, error) {
 			Name:  field.Name,
 			Label: field.Name,
 		})
-	}
-	if err := schema.InvalidFieldsToError(invalidFields); err != nil {
-		return FormModel{}, err
 	}
 	if len(res.Actions) == 0 {
 		res.Actions = append(res.Actions, FormFieldModel{
@@ -156,7 +157,7 @@ func parseIdFromURL(path string) (uint64, error) {
 	return id, nil
 }
 
-func ModelListModelHandler(w http.ResponseWriter, r *http.Request, dataModels []schema.DataModel) {
+func ModelListModelHandler(w http.ResponseWriter, r *http.Request, dataModels []*schema.DataModel) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -179,7 +180,7 @@ func ModelListModelHandler(w http.ResponseWriter, r *http.Request, dataModels []
 	w.Write(jsonOutput)
 }
 
-func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.DataModel, formModel FormModel) {
+func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.DataModel, formModel FormModel) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -226,7 +227,7 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.Da
 	w.Write(jsonOutput)
 }
 
-func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.DataModel) {
+func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.DataModel) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -257,7 +258,7 @@ func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.D
 	w.Write(jsonOutput)
 }
 
-func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema.DataModel, formModel FormModel) {
+func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.DataModel, formModel FormModel) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -270,33 +271,6 @@ func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema
 		http.Error(w, "Please send a "+http.MethodPost+" request", 400)
 		return
 	}
-
-	// Validate data against schema
-	/*{
-		// todo(Jake): 2019-11-14
-		// Make this more effecient? Maybe?
-		record := make(map[string]interface{})
-		err := json.NewDecoder(r.Body).Decode(&record)
-		if err != nil {
-			http.Error(w, "Unable to decode record", 400)
-			return
-		}
-		var invalidFields []string
-		for name, _ := range record {
-			if !dataModel.HasFieldByName(name) {
-				invalidFields = append(invalidFields, name)
-				continue
-			}
-		}
-		if len(invalidFields) > 0 {
-			fieldStr := ""
-			for _, name := range invalidFields {
-				fieldStr += "- " + name + "\n"
-			}
-			http.Error(w, "Fields do not exist on \""+dataModel.Table+"\":\n"+fieldStr, 400)
-			return
-		}
-	}*/
 
 	// Decode using dynamic record struct
 	record := dataModel.NewRecord()
@@ -383,7 +357,7 @@ func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel schema
 		// Write file
 		file, _ := json.MarshalIndent(res.Data, "", "	")
 		idString := strconv.FormatUint(newID, 10)
-		if err := ioutil.WriteFile("assets/.db/"+dataModel.Table+"/"+idString+".json", file, 0644); err != nil {
+		if err := ioutil.WriteFile(path.Join(assetdir.DatabaseDir(), dataModel.Table, idString+".json"), file, 0644); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}

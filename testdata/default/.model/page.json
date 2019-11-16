@@ -7,16 +7,10 @@
 		{
 			"Name": "Content",
 			"Type": "string"
-		}
-	],
-	"Form": [
-		{
-			"Name": "Title",
-			"Type": "TextField"
 		},
 		{
-			"Name": "Content",
-			"Type": "TextField"
+			"Name": "Parent",
+			"Type": "page"
 		}
 	]
 }

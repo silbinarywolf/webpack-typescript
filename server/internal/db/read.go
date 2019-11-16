@@ -19,7 +19,7 @@ var (
 	//errNoPointer = errors.New("expected sliceOfValues to be not an interface{}, not *interface{}")
 )
 
-func GetAll(dataModel schema.DataModel, sliceOfValues *interface{}) error {
+func GetAll(dataModel *schema.DataModel, sliceOfValues *interface{}) error {
 	if sliceOfValues == nil {
 		return errNoNil
 	}

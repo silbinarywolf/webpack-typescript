@@ -1,8 +1,10 @@
 package schema
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +23,7 @@ cannot define field using reserved name. Reserved names are:
 
 var (
 	modelMap  = make(map[string]*DataModel)
-	modelList []DataModel
+	modelList []*DataModel
 	hasLoaded bool
 )
 
@@ -66,7 +68,19 @@ func (dataModel *DataModel) NewSliceOfRecords() interface{} {
 	return dataModel.typeInfo.NewSliceOfStructs()
 }
 
-func LoadAll() {
+func (dataModel *DataModel) Identifier() string {
+	return dataModel.Table
+}
+
+func (dataModel *DataModel) FormFieldModel() string {
+	return "TextField"
+}
+
+func (dataModel *DataModel) ZeroValue() interface{} {
+	return uint64(0)
+}
+
+func LoadAll() error {
 	if hasLoaded {
 		panic("Cannot call LoadAll() more than once.")
 	}
@@ -75,7 +89,7 @@ func LoadAll() {
 	dir := assetdir.ModelDir()
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		dir, _ := filepath.Abs(assetdir.ModelDir())
-		panic("Expected folder to exist: " + dir + "\n\nAlternatively, you can point at a different directory with the -" + assetdir.AssetFlag + " flag")
+		return errors.New("Expected folder to exist: " + dir + "\n\nAlternatively, you can point at a different directory with the -" + assetdir.AssetFlag + " flag")
 	}
 
 	fileList := make([]string, 0)
@@ -89,25 +103,38 @@ func LoadAll() {
 		panic(e)
 	}
 	if len(fileList) == 0 {
-		panic("No schema files found")
+		return errors.New("No model definitions found in: " + dir)
 	}
 	for _, path := range fileList {
-		model, err := decodeAndValidateModel(path)
+		model, err := decodeModel(path)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		model.Table = filepath.Base(path)
 		model.Table = strings.TrimSuffix(model.Table, filepath.Ext(model.Table))
 		model.Table = strings.ToLower(model.Table)
 		if _, ok := modelMap[model.Table]; ok {
-			panic("Cannot define same model twice: " + model.Table + ", " + path + "\n\nModel names are case-insensitive")
+			return errors.New("Cannot define same model twice: " + model.Table + ", " + path + "\n\nModel names are case-insensitive")
 		}
-		modelList = append(modelList, model)
-		modelMap[model.Table] = &modelList[len(modelList)-1]
+		modelList = append(modelList, &model)
+		modelMap[model.Table] = modelList[len(modelList)-1]
 	}
+	// Add models to type info
+	for _, model := range modelList {
+		if !datatype.CanRegister(model) {
+			return errors.New("Cannot register model as it conflicts with an existing type name: " + model.Table)
+		}
+		datatype.Register(model)
+	}
+	for _, model := range modelList {
+		if err := initAndTypecheckDataModelFields(model); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func DataModels() []DataModel {
+func DataModels() []*DataModel {
 	if !hasLoaded {
 		panic("Must call LoadAll() first.")
 	}
@@ -135,7 +162,7 @@ func InvalidFieldsToError(invalidFields []*DataModelField) error {
 	if len(invalidFields) == 0 {
 		return nil
 	}
-	errorMessage := "The following fields have an invalid type:\n"
+	errorMessage := "These fields have an invalid type:\n"
 	for _, field := range invalidFields {
 		errorMessage += "- " + field.Name + ": \"" + field.Type + "\""
 		if field.Type == "" {
@@ -143,11 +170,11 @@ func InvalidFieldsToError(invalidFields []*DataModelField) error {
 		}
 		errorMessage += "\n"
 	}
-	errorMessage += "\nThe field types that are available are:\n- " + strings.Join(datatype.List(), "\n- ")
+	errorMessage += "\nThe types that are available are:\n- " + strings.Join(datatype.List(), "\n- ")
 	return errors.New(errorMessage)
 }
 
-func decodeAndValidateModel(filename string) (DataModel, error) {
+func decodeModel(filename string) (DataModel, error) {
 	var emptyModel DataModel
 	file, err := os.Open(filename)
 	defer file.Close()
@@ -162,9 +189,10 @@ func decodeAndValidateModel(filename string) (DataModel, error) {
 	// if people can note down things in them and make
 	// rapid changes (ie. add trailing commas without getting errors)
 	var dataModel DataModel
-	parser := json.NewDecoder(file)
-	if err := parser.Decode(&dataModel); err != nil {
-		return emptyModel, err
+	decoder := json.NewDecoder(file)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&dataModel); err != nil {
+		return emptyModel, fmt.Errorf("Error loading model: %s\n%v", filename, err)
 	}
 	table := dataModel.Table
 	// Validate model name
@@ -206,23 +234,43 @@ func decodeAndValidateModel(filename string) (DataModel, error) {
 
 		dataModel.Fields = append(reservedFields, dataModel.Fields...)
 	}
-	// Build struct type
-	{
-		var invalidFields []*DataModelField
-		structType := dynamicstruct.NewStruct()
-		for _, field := range dataModel.Fields {
-			typeInfo, ok := datatype.Get(field.Type)
-			if !ok {
-				invalidFields = append(invalidFields, field)
-				continue
-			}
-			structType.AddField(field.Name, typeInfo.ZeroValue(), `json:"`+field.Name+`"`)
-		}
-		if err := InvalidFieldsToError(invalidFields); err != nil {
-			return emptyModel, err
-		}
-		dataModel.typeInfo = structType.Build()
-	}
 
 	return dataModel, nil
+}
+
+func initAndTypecheckDataModelFields(dataModel *DataModel) error {
+	if dataModel.typeInfo != nil {
+		panic("Should not call this method more than once on dataModel")
+	}
+	// Build struct type
+	var invalidFields bytes.Buffer
+	hasMissingTypes := false
+	structType := dynamicstruct.NewStruct()
+	for _, field := range dataModel.Fields {
+		typeInfo, ok := datatype.Get(field.Type)
+		if !ok {
+			invalidFields.WriteString("- " + field.Name + ": \"" + field.Type + "\" type does not exist.")
+			if field.Type == "" {
+				invalidFields.WriteString(" (left blank or not set in file)")
+			}
+			invalidFields.WriteString("\n")
+			hasMissingTypes = true
+			continue
+		}
+		if typeInfo.Identifier() == dataModel.Identifier() {
+			// Cannot reference self unless its a pointer
+			invalidFields.WriteString("- " + field.Name + ": \"" + field.Type + "\" cannot reference itself unless its a pointer, ie. \"*" + field.Type + "\"")
+			continue
+		}
+		structType.AddField(field.Name, typeInfo.ZeroValue(), `json:"`+field.Name+`"`)
+	}
+	// Show errors
+	if invalidFields.Len() > 0 {
+		if hasMissingTypes {
+			invalidFields.WriteString("\nThe types that are available are:\n- " + strings.Join(datatype.List(), "\n- "))
+		}
+		return errors.New("Errors:\n" + invalidFields.String())
+	}
+	dataModel.typeInfo = structType.Build()
+	return nil
 }

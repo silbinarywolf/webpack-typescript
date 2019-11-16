@@ -15,6 +15,17 @@ var (
 	dataTypesByIdentifier map[string]dataTypeInterface = make(map[string]dataTypeInterface)
 )
 
+func CanRegister(dataType dataTypeInterface) bool {
+	ident := dataType.Identifier()
+	if ident == "" {
+		return false
+	}
+	if _, ok := dataTypesByIdentifier[ident]; ok {
+		return false
+	}
+	return true
+}
+
 func Register(dataType dataTypeInterface) {
 	ident := dataType.Identifier()
 	if ident == "" {

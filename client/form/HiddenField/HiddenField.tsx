@@ -5,7 +5,7 @@ interface State {
 
 interface Props {
 	name: string;
-	value: string
+	value: string | number;
 }
 
 export class HiddenField extends React.Component<Props, State> {

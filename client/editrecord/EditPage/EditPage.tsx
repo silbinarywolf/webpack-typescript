@@ -1,19 +1,16 @@
 import React from "react"
 import { RouteComponentProps } from "react-router"
 
-import {
-	Form,
-	FormModel,
-	FormRecord,
-} from "client/form/Form/Form"
+import { Form } from "client/form/Form/Form"
+import { models } from "client/models";
 import { Loading } from "client/coreui/Loading/Loading"
 import { http } from "client/http"
 import { EditPageURL } from "client/editrecord/EditPage/register"
 import { routes } from "client/routes"
 
 interface RecordGetResponse {
-	formModel: FormModel
-	data: FormRecord | undefined
+	formModel: models.FormModel
+	data: models.FormRecord | undefined
 }
 
 interface State {
@@ -23,9 +20,9 @@ interface State {
 	 * loadedRecord is the record when it's state
 	 * was loaded from the API endpoint.
 	 */
-	loadedRecord: FormRecord | undefined;
-	record: FormRecord | undefined;
-	model: FormModel | undefined;
+	loadedRecord: models.FormRecord | undefined;
+	record: models.FormRecord | undefined;
+	model: models.FormModel | undefined;
 	goToRoute: string;
 }
 
@@ -55,7 +52,7 @@ export default class EditPage extends React.Component<Props, State> {
 		this.getRecord()
 	}
 
-	readonly onRecordChange = (record: FormRecord | undefined): void => {
+	readonly onRecordChange = (record: models.FormRecord | undefined): void => {
 		this.setState({
 			record: record,
 		})
@@ -76,7 +73,7 @@ export default class EditPage extends React.Component<Props, State> {
 		let isNewRecord: boolean = true
 		if (this.state.record) {
 			const id = this.state.record["ID"]
-			isNewRecord = (id === undefined || id === 0 || id === "")
+			isNewRecord = (id === undefined || id === 0)
 		}
 		this.updateRecord(actionName)
 			.then((record) => {
@@ -89,7 +86,7 @@ export default class EditPage extends React.Component<Props, State> {
 				})
 				if (isNewRecord) {
 					this.props.history.push(routes.GenerateAdminURL(EditPageURL, {
-						id: record["ID"],
+						id: record.ID,
 						model: this.props.match.params.model,
 					}))
 				}
@@ -105,7 +102,7 @@ export default class EditPage extends React.Component<Props, State> {
 	// NOTE(Jake): 2019-11-02
 	// Think of a better name?
 	// fetchRecord? postRecord?
-	async getRecord(): Promise<FormRecord | undefined> {
+	async getRecord(): Promise<models.FormRecord | undefined> {
 		let id: number | string | undefined = this.props.match.params.id
 		if (id === undefined ||
 			id === "0" ||
@@ -135,12 +132,12 @@ export default class EditPage extends React.Component<Props, State> {
 		return response.data
 	}
 
-	async updateRecord(actionName: string): Promise<FormRecord | undefined> {
+	async updateRecord(actionName: string): Promise<models.FormRecord | undefined> {
 		if (actionName === "") {
 			throw new Error("Cannot submit with blank actionName.")
 		}
 		interface ModelResponse {
-			data: FormRecord;
+			data: models.FormRecord;
 			errors: {[name: string]: string};
 		}
 		let id: number = 0

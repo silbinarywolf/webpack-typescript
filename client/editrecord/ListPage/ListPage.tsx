@@ -2,20 +2,19 @@ import React from "react"
 import { RouteComponentProps } from "react-router"
 
 import { http } from "client/http"
-import { FormRecord } from "client/form/Form/Form"
-import { DataModel } from "client/models/DataModel"
+import { models } from "client/models"
 
 import styles from "client/editrecord/ListPage/ListPage.css"
 
 interface RecordListResponse {
-	dataModel: DataModel
-	data: FormRecord[] | undefined
+	dataModel: models.DataModel
+	data: models.FormRecord[] | undefined
 }
 
 interface State {
 	error: string;
-	list: FormRecord[];
-	dataModel?: DataModel;
+	list: models.FormRecord[];
+	dataModel?: models.DataModel;
 }
 
 interface Params {

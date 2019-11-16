@@ -30,9 +30,10 @@ type FormModel struct {
 }
 
 type FormFieldModel struct {
-	Type  string `json:"type"`
-	Name  string `json:"name"`
-	Label string `json:"label"`
+	Type     string           `json:"type"`
+	Name     string           `json:"name"`
+	Label    string           `json:"label"`
+	Children []FormFieldModel `json:"children"`
 }
 
 type ModelListResponse struct {
@@ -116,23 +117,40 @@ func handleCors(w *http.ResponseWriter, req *http.Request) {
 	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 }
 
-func createFormModel(dataModel *schema.DataModel) (FormModel, error) {
-	var res FormModel
+func addFieldsFromDataModel(dataModel *schema.DataModel, fields *[]FormFieldModel) {
 	for _, field := range dataModel.Fields {
 		typeInfo, ok := datatype.Get(field.Type)
 		if !ok {
 			panic("Cannot get type from model. This should be impossible.")
 		}
 		formFieldModel := typeInfo.FormFieldModel()
+		if dataModel, ok := typeInfo.(*schema.DataModel); ok {
+			if formFieldModel != "RecordField" {
+				panic("Should not happen. Probably need to fix/adjust things")
+			}
+			field := FormFieldModel{
+				Type:  formFieldModel, // ie. "RecordField",
+				Name:  field.Name,
+				Label: field.Name,
+			}
+			addFieldsFromDataModel(dataModel, &field.Children)
+			*fields = append(*fields, field)
+			continue
+		}
 		if field.Readonly {
 			formFieldModel = "HiddenField"
 		}
-		res.Fields = append(res.Fields, FormFieldModel{
+		*fields = append(*fields, FormFieldModel{
 			Type:  formFieldModel, // ie. "TextField",
 			Name:  field.Name,
 			Label: field.Name,
 		})
 	}
+}
+
+func createFormModel(dataModel *schema.DataModel) (FormModel, error) {
+	var res FormModel
+	addFieldsFromDataModel(dataModel, &res.Fields)
 	if len(res.Actions) == 0 {
 		res.Actions = append(res.Actions, FormFieldModel{
 			Type:  "Button",
@@ -194,7 +212,7 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.D
 	}
 
 	res := RecordGetResponse{}
-	res.Data = dataModel.NewRecord()
+	res.Data = dataModel.NewPointer()
 	res.FormModel = formModel
 
 	// Parse ID
@@ -272,7 +290,7 @@ func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schem
 	}
 
 	// Decode using dynamic record struct
-	record := dataModel.NewRecord()
+	record := dataModel.NewPointer()
 	{
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	dynamicstruct "github.com/Ompluscator/dynamic-struct"
@@ -58,8 +59,12 @@ func (dataModel *DataModel) HasFieldByName(name string) bool {
 	return ok
 }
 
-func (dataModel *DataModel) NewRecord() interface{} {
+func (dataModel *DataModel) NewPointer() interface{} {
 	return dataModel.typeInfo.New()
+}
+
+func (dataModel *DataModel) NewValue() interface{} {
+	return reflect.ValueOf(dataModel.typeInfo.New()).Elem().Interface()
 }
 
 func (dataModel *DataModel) NewSliceOfRecords() interface{} {
@@ -71,11 +76,11 @@ func (dataModel *DataModel) Identifier() string {
 }
 
 func (dataModel *DataModel) FormFieldModel() string {
-	return "TextField"
+	return "RecordField"
 }
 
 func (dataModel *DataModel) ZeroValue() interface{} {
-	return dataModel.NewRecord()
+	return dataModel.NewValue()
 }
 
 func LoadAll() error {

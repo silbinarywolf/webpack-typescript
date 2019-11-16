@@ -1,26 +1,33 @@
 import React from "react";
 
-import { FieldHolder } from "client/form/FieldHolder/FieldHolder.tsx";
+import { FormField } from "client/form/FormField/FormField";
+import { FieldHolder } from "client/form/FieldHolder/FieldHolder";
 
 import styles from "client/form/TextField/TextField.css";
 
 interface State {
 }
 
-interface Props {
-	name: string;
-	label: string;
-	value: string;
+interface Props extends FormField {
+	value: string | number;
 	disabled?: boolean;
-	onChange: (value: string) => void;
+	onChange: (value: string | number) => void;
 }
 
 export class TextField extends React.Component<Props, State> {
 	onChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
 		const {
+			value,
 			onChange
 		} = this.props;
-		onChange(e.target.value);
+		let newValue: string | number = e.target.value;
+		if (typeof value === "number") {
+			newValue = parseInt(newValue, 10);
+			onChange(newValue);
+			return;
+		} else {
+			onChange(newValue);
+		}
 	}
 
 	render(): JSX.Element {

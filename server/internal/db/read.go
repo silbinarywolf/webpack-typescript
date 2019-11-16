@@ -50,7 +50,7 @@ func GetAll(dataModel *schema.DataModel, sliceOfValues *interface{}) error {
 			if err != nil {
 				return err
 			}
-			record := dataModel.NewRecord()
+			record := dataModel.NewPointer()
 			err = json.Unmarshal(data, &record)
 			if err != nil {
 				return err

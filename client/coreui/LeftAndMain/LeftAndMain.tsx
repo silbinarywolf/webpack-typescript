@@ -1,13 +1,13 @@
 import React from "react"
 
-import { DataModel } from "client/models/DataModel"
+import { models } from "client/models"
 import { http } from "client/http"
 import { routes } from "client/routes"
 
 import styles from "client/coreui/LeftAndMain/LeftAndMain.css"
 
 interface ModelListResponse {
-	dataModels: DataModel[]
+	dataModels: models.DataModel[]
 }
 
 interface Props {
@@ -15,7 +15,7 @@ interface Props {
 
 interface State {
 	error: string;
-	dataModels: DataModel[];
+	dataModels: models.DataModel[];
 }
 
 export class LeftAndMain extends React.Component<Props, State> {

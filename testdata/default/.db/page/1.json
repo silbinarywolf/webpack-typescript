@@ -1,5 +1,9 @@
 {
 	"ID": 1,
 	"Title": "New gdsg Title",
-	"Content": "asfaf"
+	"Content": "asfaf",
+	"Parent": {
+		"ID": 0,
+		"Title": "fasfasf"
+	}
 }

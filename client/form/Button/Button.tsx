@@ -1,9 +1,10 @@
 import React from "react";
 
+import { FormField } from "client/form/FormField/FormField";
+
 import styles from "client/form/Button/Button.css";
 
-interface Props {
-	label: string;
+interface Props extends FormField {
 	type?: "button" | "submit";
 	onClick: (() => void) | undefined;
 	disabled?: boolean;

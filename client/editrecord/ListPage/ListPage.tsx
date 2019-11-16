@@ -24,6 +24,11 @@ interface Params {
 interface Props extends RouteComponentProps<Params> {
 }
 
+function isTypeObject(type: string): boolean {
+	return (type !== "string" &&
+		type !== "uint64");
+}
+
 export default class ListPage extends React.Component<Props, State> {
 	constructor(props: Props) {
 		super(props)
@@ -71,10 +76,13 @@ export default class ListPage extends React.Component<Props, State> {
 				if (!record) {
 					continue
 				}
-				const id = record["ID"]
+				const id = record.ID
 				let fields: JSX.Element[] = []
 				for (let i = 0; i < dataModel.fields.length; i++) {
 					const field = dataModel.fields[i]
+					if (isTypeObject(field.type)) {
+						continue;
+					}
 					fields.push(
 						<td key={field.name}>
 							<span>{record[field.name]}</span>
@@ -100,6 +108,9 @@ export default class ListPage extends React.Component<Props, State> {
 		let headers: JSX.Element[] = []
 		if (dataModel) {
 			for (let field of dataModel.fields) {
+				if (isTypeObject(field.type)) {
+					continue;
+				}
 				headers.push(
 					<th key={field.name}>
 						{field.name}

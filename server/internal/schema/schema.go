@@ -58,8 +58,6 @@ func (dataModel *DataModel) HasFieldByName(name string) bool {
 	return ok
 }
 
-// NewRecord will create a new map object based on the model of
-// the data
 func (dataModel *DataModel) NewRecord() interface{} {
 	return dataModel.typeInfo.New()
 }
@@ -77,7 +75,7 @@ func (dataModel *DataModel) FormFieldModel() string {
 }
 
 func (dataModel *DataModel) ZeroValue() interface{} {
-	return uint64(0)
+	return dataModel.NewRecord()
 }
 
 func LoadAll() error {
@@ -119,16 +117,60 @@ func LoadAll() error {
 		modelList = append(modelList, &model)
 		modelMap[model.Table] = modelList[len(modelList)-1]
 	}
-	// Add models to type info
-	for _, model := range modelList {
-		if !datatype.CanRegister(model) {
-			return errors.New("Cannot register model as it conflicts with an existing type name: " + model.Table)
-		}
-		datatype.Register(model)
-	}
-	for _, model := range modelList {
-		if err := initAndTypecheckDataModelFields(model); err != nil {
-			return err
+	{
+		// NOTE(Jake): 2019-11-16
+		// Resolve dependency order by going through models and if one
+		// is missing a model, swap it with the end of the list and try
+		// again until all are solved.
+
+		// NOTE(Jake): 2019-11-16
+		// I probably want to solve with a DAG (Directed acyclic graph)
+		// but this hacky code should do.
+
+		debugIterationCount := 0
+		var typerList []*DataModel
+		typerList = append(typerList, modelList...)
+		for len(typerList) > 0 {
+		Resolver:
+			for i := 0; i < len(typerList); i++ {
+				dataModel := typerList[i]
+				// Loop for models that aren't built yet
+				for _, field := range dataModel.Fields {
+					if _, ok := datatype.Get(field.Type); !ok {
+						if field.Type == dataModel.Table {
+							// Allow self-reference here so we end up
+							// error reporting this as invalid later
+							continue
+						}
+						if _, ok := modelMap[field.Type]; ok {
+							// swap with last record
+							typerList[i], typerList[len(typerList)-1] = typerList[len(typerList)-1], typerList[i]
+							//i--
+							// delete and insert at end
+							//typerList = append(typerList[:s], typerList[s+1:]...)
+							//typerList = append(typerList, dataModel)
+							continue Resolver
+						}
+						// Fallthrough here as the type definitely
+						// doesn't exist.
+					}
+				}
+				// Initialize type
+				if err := initAndTypecheckDataModelFields(dataModel); err != nil {
+					return err
+				}
+				// Register type
+				if !datatype.CanRegister(dataModel) {
+					return errors.New("Cannot register model as it conflicts with an existing type name: " + dataModel.Table)
+				}
+				datatype.Register(dataModel)
+				typerList = append(typerList[:i], typerList[i+1:]...)
+				//i--
+			}
+			debugIterationCount++
+			if debugIterationCount > 1000000 {
+				panic("Infinite loop")
+			}
 		}
 	}
 	return nil
@@ -139,23 +181,6 @@ func DataModels() []*DataModel {
 		panic("Must call LoadAll() first.")
 	}
 	return modelList
-}
-
-func createNewRecord(dataModel DataModel) (map[string]interface{}, error) {
-	var invalidFields []*DataModelField
-	data := make(map[string]interface{})
-	for _, field := range dataModel.Fields {
-		typeInfo, ok := datatype.Get(field.Type)
-		if !ok {
-			invalidFields = append(invalidFields, field)
-			continue
-		}
-		data[field.Name] = typeInfo.ZeroValue()
-	}
-	if err := InvalidFieldsToError(invalidFields); err != nil {
-		return nil, err
-	}
-	return data, nil
 }
 
 func InvalidFieldsToError(invalidFields []*DataModelField) error {
@@ -247,6 +272,11 @@ func initAndTypecheckDataModelFields(dataModel *DataModel) error {
 	hasMissingTypes := false
 	structType := dynamicstruct.NewStruct()
 	for _, field := range dataModel.Fields {
+		if field.Type == dataModel.Identifier() {
+			// Cannot reference self unless its a pointer
+			invalidFields.WriteString("- " + field.Name + ": \"" + field.Type + "\" cannot reference itself unless its a pointer, ie. \"*" + field.Type + "\"")
+			continue
+		}
 		typeInfo, ok := datatype.Get(field.Type)
 		if !ok {
 			invalidFields.WriteString("- " + field.Name + ": \"" + field.Type + "\" type does not exist.")
@@ -255,11 +285,6 @@ func initAndTypecheckDataModelFields(dataModel *DataModel) error {
 			}
 			invalidFields.WriteString("\n")
 			hasMissingTypes = true
-			continue
-		}
-		if typeInfo.Identifier() == dataModel.Identifier() {
-			// Cannot reference self unless its a pointer
-			invalidFields.WriteString("- " + field.Name + ": \"" + field.Type + "\" cannot reference itself unless its a pointer, ie. \"*" + field.Type + "\"")
 			continue
 		}
 		structType.AddField(field.Name, typeInfo.ZeroValue(), `json:"`+field.Name+`"`)

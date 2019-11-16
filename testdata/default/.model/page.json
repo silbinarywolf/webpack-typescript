@@ -10,7 +10,7 @@
 		},
 		{
 			"Name": "Parent",
-			"Type": "page"
+			"Type": "tag"
 		}
 	]
 }

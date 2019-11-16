@@ -38,6 +38,15 @@ func Register(dataType dataTypeInterface) {
 	dataTypes = append(dataTypes, dataType)
 }
 
+/*func errorCheck(dataType dataTypeInterface) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = r
+		}
+	}()
+	dataType.ZeroValue()
+}*/
+
 func Get(identifier string) (dataTypeInterface, bool) {
 	result, ok := dataTypesByIdentifier[identifier]
 	if !ok {
@@ -52,6 +61,7 @@ func List() []string {
 		list = append(list, dataType.Identifier())
 	}
 	sort.Slice(list[:], func(i, j int) bool {
+		// sort alphabetically
 		return list[i] < list[j]
 	})
 	return list

@@ -121,8 +121,7 @@ func createFormModel(dataModel *schema.DataModel) (FormModel, error) {
 	for _, field := range dataModel.Fields {
 		typeInfo, ok := datatype.Get(field.Type)
 		if !ok {
-			panic("Should not happen, should already be valid")
-			continue
+			panic("Cannot get type from model. This should be impossible.")
 		}
 		formFieldModel := typeInfo.FormFieldModel()
 		if field.Readonly {

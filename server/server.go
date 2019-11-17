@@ -73,17 +73,6 @@ func Start() {
 
 	dataModels := schema.DataModels()
 
-	// TODO(Jake): 2019-11-07
-	// Add logic here to validate against field types. DataModel + Field Type should
-	// not clash.
-	/*for _, dataModel := range dataModels {
-		datatype.Get(dataModel.Name)
-		r, _ := utf8.DecodeRuneInString(dataModel.Name[0:])
-		if !unicode.IsUpper(r) {
-			panic("Invalid DataModel, must start with a capital letter: " + dataModel.Name)
-		}
-	}*/
-
 	http.HandleFunc("/api/model/list", func(w http.ResponseWriter, r *http.Request) {
 		ModelListModelHandler(w, r, dataModels)
 	})
@@ -236,6 +225,9 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.D
 		http.Error(w, err.Error(), 500)
 		return
 	}
+
+	// Query dependencies
+
 	jsonOutput, err := json.Marshal(&res)
 	if err != nil {
 		http.Error(w, err.Error(), 500)

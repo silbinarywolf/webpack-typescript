@@ -2,12 +2,39 @@ package datatype
 
 import (
 	"sort"
+	"unicode/utf8"
 )
 
 type dataTypeInterface interface {
 	Identifier() string
 	FormFieldModel() string
 	ZeroValue() interface{}
+}
+
+type dataTypeComplex interface {
+	dataTypeInterface
+	IsPointer() bool
+}
+
+type dataTypeGet struct {
+	dataTypeInterface
+	isPointer bool
+}
+
+func (dataType *dataTypeGet) Identifier() string {
+	return dataType.dataTypeInterface.Identifier()
+}
+
+func (dataType *dataTypeGet) FormFieldModel() string {
+	return dataType.dataTypeInterface.FormFieldModel()
+}
+
+func (dataType *dataTypeGet) ZeroValue() interface{} {
+	return dataType.dataTypeInterface.ZeroValue()
+}
+
+func (dataType *dataTypeGet) IsPointer() bool {
+	return dataType.isPointer
 }
 
 var (
@@ -47,16 +74,21 @@ func Register(dataType dataTypeInterface) {
 	dataType.ZeroValue()
 }*/
 
-func Get(identifier string) (dataTypeInterface, bool) {
-	/*runeValue, width := utf8.DecodeRuneInString(identifier[0:])
+func Get(identifier string) (dataTypeComplex, bool) {
+	isPointer := false
+	runeValue, width := utf8.DecodeRuneInString(identifier[0:])
 	if runeValue == '*' {
 		identifier = identifier[width:]
-	}*/
-	result, ok := dataTypesByIdentifier[identifier]
+		isPointer = true
+	}
+	dataType, ok := dataTypesByIdentifier[identifier]
 	if !ok {
 		return nil, false
 	}
-	return result, true
+	return &dataTypeGet{
+		dataTypeInterface: dataType,
+		isPointer:         isPointer,
+	}, true
 }
 
 func List() []string {

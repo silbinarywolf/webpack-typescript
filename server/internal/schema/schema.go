@@ -48,6 +48,10 @@ type DataModel struct {
 	fieldMap map[string]*DataModelField
 }
 
+func (dataModel *DataModel) IsPointer() bool {
+	panic("Invalid operation")
+}
+
 func (dataModel *DataModel) FieldByName(name string) (*DataModelField, bool) {
 	r, ok := dataModel.fieldMap[name]
 	return r, ok
@@ -276,7 +280,6 @@ func initAndTypecheckDataModelFields(dataModel *DataModel) error {
 	var invalidFields bytes.Buffer
 	hasMissingTypes := false
 
-	//structType := dynamicstruct.NewStruct()
 	for _, field := range dataModel.Fields {
 		if field.Type == dataModel.Identifier() {
 			// Cannot reference self unless its a pointer

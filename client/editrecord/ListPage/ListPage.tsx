@@ -3,6 +3,7 @@ import { RouteComponentProps } from "react-router"
 
 import { http } from "client/http"
 import { models } from "client/models"
+import { routes } from "client/routes"
 
 import styles from "client/editrecord/ListPage/ListPage.css"
 
@@ -122,7 +123,10 @@ export default class ListPage extends React.Component<Props, State> {
 		return (
 			<React.Fragment>
 				<div>
-					List Record
+					<h1>List Record</h1>
+					<a href={routes.GenerateAdminURL("/data/"+this.props.match.params.model+"/add", undefined)}>
+						New
+					</a>
 				</div>
 				<table className={styles.table}>
 					<thead>

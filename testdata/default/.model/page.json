@@ -9,8 +9,8 @@
 			"Type": "string"
 		},
 		{
-			"Name": "Parent",
-			"Type": "*page"
+			"Name": "Tag",
+			"Type": "*tag"
 		},
 		{
 			"Name": "EmbedTag",

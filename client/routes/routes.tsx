@@ -86,7 +86,7 @@ export namespace routes {
 		return
 	}
 
-	export function GenerateAdminURL<T extends {[prop: string]: string | number}>(uri: string, routeProps: T) {
+	export function GenerateAdminURL<T extends {[prop: string]: string | number}>(uri: string, routeProps: T | undefined) {
 		return http.buildUriAndParams("/" + AdminURL + uri, routeProps)
 	}
 }

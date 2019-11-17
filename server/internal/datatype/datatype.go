@@ -48,6 +48,10 @@ func Register(dataType dataTypeInterface) {
 }*/
 
 func Get(identifier string) (dataTypeInterface, bool) {
+	/*runeValue, width := utf8.DecodeRuneInString(identifier[0:])
+	if runeValue == '*' {
+		identifier = identifier[width:]
+	}*/
 	result, ok := dataTypesByIdentifier[identifier]
 	if !ok {
 		return nil, false

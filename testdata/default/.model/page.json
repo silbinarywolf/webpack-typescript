@@ -10,6 +10,10 @@
 		},
 		{
 			"Name": "Parent",
+			"Type": "*page"
+		},
+		{
+			"Name": "EmbedTag",
 			"Type": "tag"
 		}
 	]

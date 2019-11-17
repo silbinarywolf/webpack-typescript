@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"strings"
 
-	dynamicstruct "github.com/Ompluscator/dynamic-struct"
 	"github.com/silbinarywolf/webpack-typescript/server/internal/assetdir"
 	"github.com/silbinarywolf/webpack-typescript/server/internal/datatype"
 )
@@ -45,7 +44,7 @@ type DataModel struct {
 	// necessarily be the table name.
 	Table    string            `json:"name"`
 	Fields   []*DataModelField `json:"fields"`
-	typeInfo dynamicstruct.DynamicStruct
+	typeInfo reflect.Type
 	fieldMap map[string]*DataModelField
 }
 
@@ -60,15 +59,19 @@ func (dataModel *DataModel) HasFieldByName(name string) bool {
 }
 
 func (dataModel *DataModel) NewPointer() interface{} {
-	return dataModel.typeInfo.New()
+	return reflect.New(dataModel.typeInfo).Interface()
 }
 
 func (dataModel *DataModel) NewValue() interface{} {
-	return reflect.ValueOf(dataModel.typeInfo.New()).Elem().Interface()
+	// todo(Jake): 2019-11-17
+	// Think about how to do this properly. This is a hold over
+	// from copy-pasting from dynamic-struct github
+	newPointer := reflect.New(dataModel.typeInfo).Interface()
+	return reflect.ValueOf(newPointer).Elem().Interface()
 }
 
 func (dataModel *DataModel) NewSliceOfRecords() interface{} {
-	return dataModel.typeInfo.NewSliceOfStructs()
+	return reflect.New(reflect.SliceOf(dataModel.typeInfo)).Interface() // dataModel.typeInfo.NewSliceOfStructs()
 }
 
 func (dataModel *DataModel) Identifier() string {
@@ -164,11 +167,6 @@ func LoadAll() error {
 				if err := initAndTypecheckDataModelFields(dataModel); err != nil {
 					return err
 				}
-				// Register type
-				if !datatype.CanRegister(dataModel) {
-					return errors.New("Cannot register model as it conflicts with an existing type name: " + dataModel.Table)
-				}
-				datatype.Register(dataModel)
 				typerList = append(typerList[:i], typerList[i+1:]...)
 				//i--
 			}
@@ -272,10 +270,13 @@ func initAndTypecheckDataModelFields(dataModel *DataModel) error {
 	if dataModel.typeInfo != nil {
 		panic("Should not call this method more than once on dataModel")
 	}
+
 	// Build struct type
+	structFields := make([]reflect.StructField, 0, len(dataModel.Fields))
 	var invalidFields bytes.Buffer
 	hasMissingTypes := false
-	structType := dynamicstruct.NewStruct()
+
+	//structType := dynamicstruct.NewStruct()
 	for _, field := range dataModel.Fields {
 		if field.Type == dataModel.Identifier() {
 			// Cannot reference self unless its a pointer
@@ -292,7 +293,11 @@ func initAndTypecheckDataModelFields(dataModel *DataModel) error {
 			hasMissingTypes = true
 			continue
 		}
-		structType.AddField(field.Name, typeInfo.ZeroValue(), `json:"`+field.Name+`,omitempty"`)
+		structFields = append(structFields, reflect.StructField{
+			Name: field.Name,
+			Type: reflect.TypeOf(typeInfo.ZeroValue()),
+			Tag:  reflect.StructTag(`json:"` + field.Name + `,omitempty"`),
+		})
 	}
 	// Show errors
 	if invalidFields.Len() > 0 {
@@ -301,6 +306,11 @@ func initAndTypecheckDataModelFields(dataModel *DataModel) error {
 		}
 		return errors.New("Errors:\n" + invalidFields.String())
 	}
-	dataModel.typeInfo = structType.Build()
+	dataModel.typeInfo = reflect.StructOf(structFields)
+	// Register type
+	if !datatype.CanRegister(dataModel) {
+		return errors.New("Cannot register model as it conflicts with an existing type name: " + dataModel.Table)
+	}
+	datatype.Register(dataModel)
 	return nil
 }

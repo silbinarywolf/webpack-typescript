@@ -21,6 +21,11 @@ cannot define field using reserved name. Reserved names are:
 `
 )
 
+const (
+	TagOwnershipShared    = "shared"
+	TagOwnershipExclusive = "exclusive"
+)
+
 var (
 	modelMap  = make(map[string]*DataModel)
 	modelList []*DataModel
@@ -87,7 +92,7 @@ func (dataModel *DataModel) FormFieldModel() string {
 }
 
 func (dataModel *DataModel) ZeroValue() interface{} {
-	return dataModel.NewValue()
+	return uint64(0)
 }
 
 func LoadAll() error {
@@ -148,7 +153,7 @@ func LoadAll() error {
 				dataModel := typerList[i]
 				// Loop for models that aren't built yet
 				for _, field := range dataModel.Fields {
-					if _, ok := datatype.Get(field.Type); !ok {
+					if _, ok, _ := datatype.Get(field.Type); !ok {
 						if field.Type == dataModel.Table {
 							// Allow self-reference here so we end up
 							// error reporting this as invalid later
@@ -286,7 +291,7 @@ func initAndTypecheckDataModelFields(dataModel *DataModel) error {
 			invalidFields.WriteString("- " + field.Name + ": \"" + field.Type + "\" cannot reference itself unless its a pointer, ie. \"*" + field.Type + "\"")
 			continue
 		}
-		typeInfo, ok := datatype.Get(field.Type)
+		typeInfo, ok, isPointer := datatype.Get(field.Type)
 		if !ok {
 			invalidFields.WriteString("- " + field.Name + ": \"" + field.Type + "\" type does not exist.")
 			if field.Type == "" {
@@ -296,10 +301,18 @@ func initAndTypecheckDataModelFields(dataModel *DataModel) error {
 			hasMissingTypes = true
 			continue
 		}
+		fmt.Printf("%T\n", typeInfo)
+		tagInfo := `json:"` + field.Name + `"` // ,omitempty <- disabled this so we send zero values to frontend
+		if typeInfo, ok := typeInfo.(*DataModel); ok {
+			tagInfo += ` model:"` + typeInfo.Identifier() + `"`
+		}
+		if isPointer {
+			tagInfo += ` ownership:"` + TagOwnershipShared + `"`
+		}
 		structFields = append(structFields, reflect.StructField{
 			Name: field.Name,
 			Type: reflect.TypeOf(typeInfo.ZeroValue()),
-			Tag:  reflect.StructTag(`json:"` + field.Name + `,omitempty"`),
+			Tag:  reflect.StructTag(tagInfo),
 		})
 	}
 	// Show errors

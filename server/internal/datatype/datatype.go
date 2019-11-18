@@ -11,31 +11,10 @@ type dataTypeInterface interface {
 	ZeroValue() interface{}
 }
 
-type dataTypeComplex interface {
+/*type dataTypeComplex interface {
 	dataTypeInterface
 	IsPointer() bool
-}
-
-type dataTypeGet struct {
-	dataTypeInterface
-	isPointer bool
-}
-
-func (dataType *dataTypeGet) Identifier() string {
-	return dataType.dataTypeInterface.Identifier()
-}
-
-func (dataType *dataTypeGet) FormFieldModel() string {
-	return dataType.dataTypeInterface.FormFieldModel()
-}
-
-func (dataType *dataTypeGet) ZeroValue() interface{} {
-	return dataType.dataTypeInterface.ZeroValue()
-}
-
-func (dataType *dataTypeGet) IsPointer() bool {
-	return dataType.isPointer
-}
+}*/
 
 var (
 	dataTypes             []dataTypeInterface
@@ -74,21 +53,14 @@ func Register(dataType dataTypeInterface) {
 	dataType.ZeroValue()
 }*/
 
-func Get(identifier string) (dataTypeComplex, bool) {
-	isPointer := false
+func Get(identifier string) (dataType dataTypeInterface, ok bool, isPointer bool) {
 	runeValue, width := utf8.DecodeRuneInString(identifier[0:])
 	if runeValue == '*' {
 		identifier = identifier[width:]
 		isPointer = true
 	}
-	dataType, ok := dataTypesByIdentifier[identifier]
-	if !ok {
-		return nil, false
-	}
-	return &dataTypeGet{
-		dataTypeInterface: dataType,
-		isPointer:         isPointer,
-	}, true
+	dataType, ok = dataTypesByIdentifier[identifier]
+	return
 }
 
 func List() []string {

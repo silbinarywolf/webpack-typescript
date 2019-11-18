@@ -46,7 +46,8 @@ type ResponseWithData struct {
 
 type RecordGetResponse struct {
 	ResponseWithData
-	FormModel FormModel `json:"formModel"`
+	Records   map[string]map[uint64]interface{} `json:"records"`
+	FormModel FormModel                         `json:"formModel"`
 }
 
 type RecordListResponse struct {
@@ -108,7 +109,7 @@ func handleCors(w *http.ResponseWriter, req *http.Request) {
 
 func addFieldsFromDataModel(dataModel *schema.DataModel, fields *[]FormFieldModel) {
 	for _, field := range dataModel.Fields {
-		typeInfo, ok := datatype.Get(field.Type)
+		typeInfo, ok, _ := datatype.Get(field.Type)
 		if !ok {
 			panic("Cannot get type from model. This should be impossible.")
 		}
@@ -227,6 +228,47 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.D
 	}
 
 	// Query dependencies
+	{
+		res.Records = make(map[string]map[uint64]interface{})
+		v := reflect.ValueOf(res.Data).Elem()
+		t := reflect.TypeOf(res.Data).Elem()
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+			if modelName := field.Tag.Get("model"); modelName != "" {
+				id, ok := v.Field(i).Interface().(uint64)
+				if !ok {
+					panic("Should be uint64")
+				}
+				recordMap, ok := res.Records[modelName]
+				if !ok {
+					recordMap = make(map[uint64]interface{})
+					res.Records[modelName] = recordMap
+				}
+				if _, ok := recordMap[id]; ok {
+					// If already loaded, skip re-querying
+					continue
+				}
+				dataType, ok, _ := datatype.Get(modelName)
+				if !ok {
+					panic("Unexpected error. \"model\" tagged cannot be found: " + modelName)
+				}
+				dataModel, ok := dataType.(*schema.DataModel)
+				if !ok {
+					panic("Unexpected error. Cannot assert data type as model: " + modelName)
+				}
+				newRecord := dataModel.NewPointer()
+				if id > 0 {
+					err = db.GetByID(modelName, strconv.FormatUint(id, 10), newRecord)
+					if err != nil {
+						http.Error(w, err.Error(), 500)
+						return
+					}
+				}
+				recordMap[id] = newRecord
+				fmt.Printf("model: %d %s, %v (%T)\n", id, modelName, newRecord, newRecord)
+			}
+		}
+	}
 
 	jsonOutput, err := json.Marshal(&res)
 	if err != nil {

@@ -9,17 +9,24 @@ import { EditPageURL } from "client/editrecord/EditPage/register"
 import { routes } from "client/routes"
 
 interface RecordGetResponse {
-	formModel: models.FormModel
-	data: models.FormRecord
+	data: RecordGetResponseData;
+	formModels: { [modelName: string]: models.FormModel }
 	records: { [modelName: string]: { [id: number ]: models.FormRecord } }
+}
+
+interface RecordGetResponseData {
+	id: number;
+	model: string;
 }
 
 interface State {
 	isSubmitting: boolean;
 	error: string;
-	record: models.FormRecord | undefined;
-	model: models.FormModel | undefined;
 	goToRoute: string;
+
+	data: RecordGetResponseData;
+	formModels: { [modelName: string]: models.FormModel }
+	records: { [modelName: string]: { [id: number ]: models.FormRecord } }
 }
 
 interface Params {
@@ -37,9 +44,14 @@ export default class EditPage extends React.Component<Props, State> {
 		this.state = {
 			isSubmitting: false,
 			error: "",
-			record: undefined,
-			model: undefined,
 			goToRoute: "",
+
+			data: {
+				id: 0,
+				model: "",
+			},
+			formModels: {},
+			records: {},
 		}
 	}
 
@@ -48,9 +60,10 @@ export default class EditPage extends React.Component<Props, State> {
 	}
 
 	readonly onRecordChange = (record: models.FormRecord | undefined): void => {
-		this.setState({
+		throw new Error("Fix saving")
+		/*this.setState({
 			record: record,
-		})
+		})*/
 	}
 
 	readonly canSave = (): boolean => {
@@ -61,7 +74,8 @@ export default class EditPage extends React.Component<Props, State> {
 		if (!this.canSave()) {
 			return
 		}
-		this.setState({
+		throw new Error("fix saving")
+		/*this.setState({
 			error: "",
 			isSubmitting: true,
 		})
@@ -91,7 +105,7 @@ export default class EditPage extends React.Component<Props, State> {
 					isSubmitting: false,
 					error: String(e),
 				})
-			})
+			})*/
 	}
 
 	// NOTE(Jake): 2019-11-02
@@ -119,29 +133,11 @@ export default class EditPage extends React.Component<Props, State> {
 			})
 			return
 		}
-		let record = response.data;
-		for (let fieldModel of response.formModel.fields) {
-			if (fieldModel.type === "RecordField") {
-				let id = record[fieldModel.name]
-				if (id === undefined) {
-					id = 0;
-				}
-				id = Number(id)
-				const modelName = fieldModel.model
-				const model = response.records[modelName];
-				if (model === undefined) {
-					throw new Error("Missing model")
-				}
-				const subRecord = model[id];
-				if (subRecord === undefined) {
-					throw new Error("Missing record for model: " + modelName)
-				}
-				record[fieldModel.name] = subRecord
-			}
-		}
 		this.setState({
 			model: response.formModel,
-			record: record,
+			data: response.data,
+			records: response.records,
+			formModels: response.formModels,
 		})
 	}
 
@@ -187,11 +183,14 @@ export default class EditPage extends React.Component<Props, State> {
 
 	render(): JSX.Element {
 		const {
-			model,
-			record,
 			error,
 			isSubmitting,
+
+			data,
+			formModels,
+			records,
 		} = this.state
+		data.id;
 		return (
 			<React.Fragment>
 				{model === undefined &&
@@ -208,9 +207,7 @@ export default class EditPage extends React.Component<Props, State> {
 					<React.Fragment>
 						<Form
 							id="EditPageForm"
-							record={record}
 							error={error}
-							model={model}
 							onRecordChange={this.onRecordChange}
 							onSubmit={this.onSaveSubmit}
 							disabled={isSubmitting}

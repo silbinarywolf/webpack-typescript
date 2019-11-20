@@ -34,6 +34,9 @@ type FormFieldModel struct {
 	Name     string           `json:"name"`
 	Label    string           `json:"label"`
 	Children []FormFieldModel `json:"children"`
+
+	// Model is used by RecordField only
+	Model string `json:"model"`
 }
 
 type ModelListResponse struct {
@@ -122,6 +125,7 @@ func addFieldsFromDataModel(dataModel *schema.DataModel, fields *[]FormFieldMode
 				Type:  formFieldModel, // ie. "RecordField",
 				Name:  field.Name,
 				Label: field.Name,
+				Model: dataModel.Table,
 			}
 			addFieldsFromDataModel(dataModel, &field.Children)
 			*fields = append(*fields, field)

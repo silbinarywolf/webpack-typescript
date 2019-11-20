@@ -10,17 +10,13 @@ import { routes } from "client/routes"
 
 interface RecordGetResponse {
 	formModel: models.FormModel
-	data: models.FormRecord | undefined
+	data: models.FormRecord
+	records: { [modelName: string]: { [id: number ]: models.FormRecord } }
 }
 
 interface State {
 	isSubmitting: boolean;
 	error: string;
-	/**
-	 * loadedRecord is the record when it's state
-	 * was loaded from the API endpoint.
-	 */
-	loadedRecord: models.FormRecord | undefined;
 	record: models.FormRecord | undefined;
 	model: models.FormModel | undefined;
 	goToRoute: string;
@@ -41,7 +37,6 @@ export default class EditPage extends React.Component<Props, State> {
 		this.state = {
 			isSubmitting: false,
 			error: "",
-			loadedRecord: undefined,
 			record: undefined,
 			model: undefined,
 			goToRoute: "",
@@ -102,7 +97,7 @@ export default class EditPage extends React.Component<Props, State> {
 	// NOTE(Jake): 2019-11-02
 	// Think of a better name?
 	// fetchRecord? postRecord?
-	async getRecord(): Promise<models.FormRecord | undefined> {
+	async getRecord(): Promise<void> {
 		let id: number | string | undefined = this.props.match.params.id
 		if (id === undefined ||
 			id === "0" ||
@@ -114,7 +109,7 @@ export default class EditPage extends React.Component<Props, State> {
 		})
 		let response: RecordGetResponse
 		try {
-			response = await http.Get("/api/record/:model/get/:id", {
+			response = await http.Get<RecordGetResponse>("/api/record/:model/get/:id", {
 				model: this.props.match.params.model,
 				id: id,
 			})
@@ -122,14 +117,32 @@ export default class EditPage extends React.Component<Props, State> {
 			this.setState({
 				error: String(e),
 			})
-			return undefined
+			return
+		}
+		let record = response.data;
+		for (let fieldModel of response.formModel.fields) {
+			if (fieldModel.type === "RecordField") {
+				let id = record[fieldModel.name]
+				if (id === undefined) {
+					id = 0;
+				}
+				id = Number(id)
+				const modelName = fieldModel.model
+				const model = response.records[modelName];
+				if (model === undefined) {
+					throw new Error("Missing model")
+				}
+				const subRecord = model[id];
+				if (subRecord === undefined) {
+					throw new Error("Missing record for model: " + modelName)
+				}
+				record[fieldModel.name] = subRecord
+			}
 		}
 		this.setState({
 			model: response.formModel,
-			loadedRecord: response.data,
-			record: response.data,
+			record: record,
 		})
-		return response.data
 	}
 
 	async updateRecord(actionName: string): Promise<models.FormRecord | undefined> {

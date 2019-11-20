@@ -24,5 +24,9 @@ export namespace models {
 		name: string;
 		label: string;
 		children: FormFieldModel[];
+		/**
+		 * model is used by RecordField only
+		 */
+		model: string;
 	}
 }

@@ -22,11 +22,18 @@ import (
 
 var (
 	indexHtml []byte
+
+	dataModelInfoList []DataModelInfo
+	formModelMap      = make(map[string]FormModel)
 )
 
+type DataModelInfo struct {
+	DataModel *schema.DataModel
+	FormModel FormModel
+}
+
 type FormModel struct {
-	Fields  []FormFieldModel `json:"fields"`
-	Actions []FormFieldModel `json:"actions"`
+	Fields []FormFieldModel `json:"fields"`
 }
 
 type FormFieldModel struct {
@@ -48,9 +55,12 @@ type ResponseWithData struct {
 }
 
 type RecordGetResponse struct {
-	ResponseWithData
-	Records   map[string]map[uint64]interface{} `json:"records"`
-	FormModel FormModel                         `json:"formModel"`
+	Data struct {
+		ID    uint64 `json:"id"`
+		Model string `json:"model"`
+	} `json:"data"`
+	Records    map[string]map[uint64]interface{} `json:"records"`
+	FormModels map[string]FormModel              `json:"formModels"`
 }
 
 type RecordListResponse struct {
@@ -75,29 +85,39 @@ func Start() {
 	// TODO(Jake): 2019-10-27
 	// Maybe a system to watch model files so that schema can be updated on the fly
 
-	dataModels := schema.DataModels()
+	// Init dataModelInfoList
+	{
+		dataModels := schema.DataModels()
+		for _, dataModel := range dataModels {
+			formModel, err := createFormModel(dataModel)
+			if err != nil {
+				fmt.Printf("Error loading model: %s\n%s", dataModel.Table, err)
+				os.Exit(0)
+				return
+			}
+			dataModelInfoList = append(dataModelInfoList, DataModelInfo{
+				DataModel: dataModel,
+				FormModel: formModel,
+			})
+			formModelMap[dataModel.Table] = formModel
+		}
+	}
 
 	http.HandleFunc("/api/model/list", func(w http.ResponseWriter, r *http.Request) {
-		ModelListModelHandler(w, r, dataModels)
+		ModelListModelHandler(w, r, dataModelInfoList)
 	})
-	for _, dataModel := range dataModels {
-		dataModel := dataModel
-		formModel, err := createFormModel(dataModel)
-		if err != nil {
-			fmt.Printf("Error loading model: %s\n%s", dataModel.Table, err)
-			os.Exit(0)
-			return
-		}
+	for _, dataModelInfo := range dataModelInfoList {
+		dataModelInfo := dataModelInfo
 
-		apiName := dataModel.Table
+		apiName := dataModelInfo.DataModel.Table
 		http.HandleFunc("/api/record/"+apiName+"/list", func(w http.ResponseWriter, r *http.Request) {
-			ListModelHandler(w, r, dataModel)
+			ListModelHandler(w, r, dataModelInfo)
 		})
 		http.HandleFunc("/api/record/"+apiName+"/get/", func(w http.ResponseWriter, r *http.Request) {
-			GetModelHandler(w, r, dataModel, formModel)
+			GetModelHandler(w, r, dataModelInfo)
 		})
 		http.HandleFunc("/api/record/"+apiName+"/update/", func(w http.ResponseWriter, r *http.Request) {
-			UpdateModelHandler(w, r, dataModel, formModel)
+			UpdateModelHandler(w, r, dataModelInfo)
 		})
 	}
 	fmt.Printf("Starting server on :8080...\n")
@@ -145,13 +165,13 @@ func addFieldsFromDataModel(dataModel *schema.DataModel, fields *[]FormFieldMode
 func createFormModel(dataModel *schema.DataModel) (FormModel, error) {
 	var res FormModel
 	addFieldsFromDataModel(dataModel, &res.Fields)
-	if len(res.Actions) == 0 {
+	/*if len(res.Actions) == 0 {
 		res.Actions = append(res.Actions, FormFieldModel{
 			Type:  "Button",
 			Name:  "update",
 			Label: "Save",
 		})
-	}
+	}*/
 	return res, nil
 }
 
@@ -168,7 +188,7 @@ func parseIdFromURL(path string) (uint64, error) {
 	return id, nil
 }
 
-func ModelListModelHandler(w http.ResponseWriter, r *http.Request, dataModels []*schema.DataModel) {
+func ModelListModelHandler(w http.ResponseWriter, r *http.Request, dataModels []DataModelInfo) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -182,7 +202,9 @@ func ModelListModelHandler(w http.ResponseWriter, r *http.Request, dataModels []
 		return
 	}
 	res := ModelListResponse{}
-	res.DataModels = dataModels
+	for _, dataModelInfo := range dataModels {
+		res.DataModels = append(res.DataModels, dataModelInfo.DataModel)
+	}
 	jsonOutput, err := json.Marshal(&res)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -191,7 +213,7 @@ func ModelListModelHandler(w http.ResponseWriter, r *http.Request, dataModels []
 	w.Write(jsonOutput)
 }
 
-func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.DataModel, formModel FormModel) {
+func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModelInfo DataModelInfo) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -205,37 +227,52 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.D
 		return
 	}
 
-	res := RecordGetResponse{}
-	res.Data = dataModel.NewPointer()
-	res.FormModel = formModel
-
 	// Parse ID
 	newID, err := parseIdFromURL(r.URL.Path)
 	if err != nil {
 		http.Error(w, "Invalid ID, cannot parse given number: "+err.Error(), 400)
 		return
 	}
-	if newID == 0 {
-		// New record
-		jsonOutput, err := json.Marshal(&res)
+
+	dataModel := dataModelInfo.DataModel
+
+	// Get record
+	res := RecordGetResponse{}
+	res.Data.Model = dataModel.Table
+	res.FormModels = make(map[string]FormModel)
+	record := dataModel.NewPointer()
+	if newID != 0 {
+		err = db.GetByID(dataModel.Table, strconv.FormatUint(newID, 10), record)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
-		w.Write(jsonOutput)
-		return
-	}
-	err = db.GetByID(dataModel.Table, strconv.FormatUint(newID, 10), &res.Data)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+		res.Data.ID = newID
 	}
 
 	// Query dependencies
 	{
 		res.Records = make(map[string]map[uint64]interface{})
-		v := reflect.ValueOf(res.Data).Elem()
-		t := reflect.TypeOf(res.Data).Elem()
+
+		// Add record
+		{
+			modelName := dataModel.Table
+			recordMap, ok := res.Records[modelName]
+			if !ok {
+				recordMap = make(map[uint64]interface{})
+				res.Records[modelName] = recordMap
+			}
+			if _, ok := recordMap[newID]; !ok {
+				recordMap[newID] = record
+			}
+			if _, ok := res.FormModels[dataModel.Table]; !ok {
+				res.FormModels[dataModel.Table] = formModelMap[dataModel.Table]
+			}
+		}
+
+		// Query dependencies
+		v := reflect.ValueOf(record).Elem()
+		t := reflect.TypeOf(record).Elem()
 		for i := 0; i < t.NumField(); i++ {
 			field := t.Field(i)
 			if modelName := field.Tag.Get("model"); modelName != "" {
@@ -269,7 +306,10 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.D
 					}
 				}
 				recordMap[id] = newRecord
-				fmt.Printf("model: %d %s, %v (%T)\n", id, modelName, newRecord, newRecord)
+				if _, ok := res.FormModels[dataModel.Table]; !ok {
+					res.FormModels[dataModel.Table] = formModelMap[dataModel.Table]
+				}
+				//fmt.Printf("model: %d %s, %v (%T)\n", id, modelName, newRecord, newRecord)
 			}
 		}
 	}
@@ -282,7 +322,7 @@ func GetModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.D
 	w.Write(jsonOutput)
 }
 
-func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.DataModel) {
+func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModelInfo DataModelInfo) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -295,6 +335,8 @@ func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.
 		http.Error(w, "Please send a "+http.MethodGet+" request", 400)
 		return
 	}
+
+	dataModel := dataModelInfo.DataModel
 
 	res := RecordListResponse{}
 	res.DataModel = dataModel
@@ -313,7 +355,7 @@ func ListModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.
 	w.Write(jsonOutput)
 }
 
-func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schema.DataModel, formModel FormModel) {
+func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModelInfo DataModelInfo) {
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
 		return
@@ -326,6 +368,8 @@ func UpdateModelHandler(w http.ResponseWriter, r *http.Request, dataModel *schem
 		http.Error(w, "Please send a "+http.MethodPost+" request", 400)
 		return
 	}
+
+	dataModel := dataModelInfo.DataModel
 
 	// Decode using dynamic record struct
 	record := dataModel.NewPointer()

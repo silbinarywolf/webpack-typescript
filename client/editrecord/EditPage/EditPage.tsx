@@ -5,8 +5,10 @@ import { Form } from "client/form/Form/Form"
 import { models } from "client/models";
 import { Loading } from "client/coreui/Loading/Loading"
 import { http } from "client/http"
-import { EditPageURL } from "client/editrecord/EditPage/register"
-import { routes } from "client/routes"
+import { RecordField } from "client/form/RecordField/RecordField";
+import { Button } from "client/form/Button/Button";
+//import { EditPageURL } from "client/editrecord/EditPage/register"
+//import { routes } from "client/routes"
 
 interface RecordGetResponse {
 	data: RecordGetResponseData;
@@ -56,7 +58,7 @@ export default class EditPage extends React.Component<Props, State> {
 	}
 
 	componentDidMount() {
-		this.getRecord()
+		this.loadRecord()
 	}
 
 	readonly onRecordChange = (record: models.FormRecord | undefined): void => {
@@ -108,10 +110,28 @@ export default class EditPage extends React.Component<Props, State> {
 			})*/
 	}
 
+	Record(): models.FormRecord | undefined {
+		const id = this.state.data.id;
+		const modelName = this.state.data.model;
+		const recordMap = this.state.records[modelName];
+		if (recordMap === undefined) {
+			return;
+		}
+		const formModel = this.state.formModels[modelName];
+		if (formModel === undefined) {
+			return;
+		}
+		const record = recordMap[id];
+		if (record === undefined) {
+			return;
+		}
+		return record;
+	}
+
 	// NOTE(Jake): 2019-11-02
 	// Think of a better name?
 	// fetchRecord? postRecord?
-	async getRecord(): Promise<void> {
+	async loadRecord(): Promise<void> {
 		let id: number | string | undefined = this.props.match.params.id
 		if (id === undefined ||
 			id === "0" ||
@@ -134,40 +154,29 @@ export default class EditPage extends React.Component<Props, State> {
 			return
 		}
 		this.setState({
-			model: response.formModel,
 			data: response.data,
 			records: response.records,
 			formModels: response.formModels,
 		})
 	}
 
-	async updateRecord(actionName: string): Promise<models.FormRecord | undefined> {
-		if (actionName === "") {
-			throw new Error("Cannot submit with blank actionName.")
-		}
+	async saveRecord(): Promise<models.FormRecord | undefined> {
 		interface ModelResponse {
 			data: models.FormRecord;
 			errors: {[name: string]: string};
 		}
-		let id: number = 0
-		if (this.state.record &&
-			this.state.record["ID"]) {
-			let recordID = this.state.record["ID"]
-			if (typeof recordID !== "number") {
-				throw new Error("Record ID must be a number type.")
-			}
-			id = recordID
-		}
+		let id: number = this.state.data.id;
 		let res;
 		try {
 			res = await http.Post<ModelResponse>(
-				"/api/record/:model/:actionName/:id",
+				"/api/record/:model/update/:id",
 				{
-					model: this.props.match.params.model,
-					actionName: actionName,
+					model: this.state.data.model,
 					id: id,
 				},
-				this.state.record
+				// todo(Jake): 2019-11-21
+				// update this to save multiple records at some point
+				this.Record()
 			)
 		} catch (e) {
 			this.setState({
@@ -178,7 +187,7 @@ export default class EditPage extends React.Component<Props, State> {
 		if (res.data === undefined) {
 			throw new Error("Unexpected from server, undefined value.")
 		}
-		return res.data
+		console.warn("todo: update this to give back saved records")
 	}
 
 	render(): JSX.Element {
@@ -189,11 +198,11 @@ export default class EditPage extends React.Component<Props, State> {
 			data,
 			formModels,
 			records,
-		} = this.state
-		data.id;
+		} = this.state;
+		data.id
 		return (
 			<React.Fragment>
-				{model === undefined &&
+				{data.id === 0 &&
 					<React.Fragment>
 						{error !== "" &&
 							<pre>{error}</pre>
@@ -203,15 +212,31 @@ export default class EditPage extends React.Component<Props, State> {
 						}
 					</React.Fragment>
 				}
-				{model !== undefined &&
+				{data.id !== 0 &&
 					<React.Fragment>
 						<Form
 							id="EditPageForm"
 							error={error}
-							onRecordChange={this.onRecordChange}
 							onSubmit={this.onSaveSubmit}
 							disabled={isSubmitting}
-						/>
+						>
+							<RecordField
+								label={data.model}
+								name={data.model}
+								recordModel={data.model}
+								recordId={data.id}
+								records={records}
+								formModels={formModels}
+								//onChange={this.onRecordChange}
+							/>
+							<Button
+								name="save"
+								label="Save"
+								type="submit"
+								disabled={!this.canSave()}
+								onClick={() => this.saveRecord()}
+							/>
+						</Form>
 						{isSubmitting &&
 							<p>Saving...</p>
 						}

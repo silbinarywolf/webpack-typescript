@@ -47,7 +47,7 @@ export class RecordField extends React.Component<Props, State> {
 		this.setState({
 			record: record,
 		})
-		console.warn(this.props.records)
+		console.warn('onChangeField', this.props.records)
 	}
 
 	renderFields = (): JSX.Element | undefined => {
@@ -65,6 +65,7 @@ export class RecordField extends React.Component<Props, State> {
 		} = this.props;
 		let renderedFields: JSX.Element[] = [];
 		let namesTaken: {[name: string]: boolean} = {};
+		console.warn('renderFields', record)
 		for (let field of formModel.fields) {
 			const {
 				type,

@@ -7,8 +7,8 @@ import { Loading } from "client/coreui/Loading/Loading"
 import { http } from "client/http"
 import { RecordField } from "client/form/RecordField/RecordField";
 import { Button } from "client/form/Button/Button";
-//import { EditPageURL } from "client/editrecord/EditPage/register"
-//import { routes } from "client/routes"
+import { EditPageURL } from "client/editrecord/EditPage/register"
+import { routes } from "client/routes"
 
 interface RecordGetResponse {
 	data: RecordGetResponseData;
@@ -166,6 +166,7 @@ export default class EditPage extends React.Component<Props, State> {
 			errors: {[name: string]: string};
 		}
 		let id: number = this.state.data.id;
+		const isNewRecord = id === 0;
 		let res;
 		try {
 			res = await http.Post<ModelResponse>(
@@ -187,7 +188,12 @@ export default class EditPage extends React.Component<Props, State> {
 		if (res.data === undefined) {
 			throw new Error("Unexpected from server, undefined value.")
 		}
-		console.warn("todo: update this to give back saved records")
+		if (isNewRecord) {
+			this.props.history.push(routes.GenerateAdminURL(EditPageURL, {
+				id: res.data.ID,
+				model: this.props.match.params.model,
+			}))
+		}
 	}
 
 	render(): JSX.Element {
@@ -202,7 +208,7 @@ export default class EditPage extends React.Component<Props, State> {
 		data.id
 		return (
 			<React.Fragment>
-				{data.id === 0 &&
+				{data.model === "" &&
 					<React.Fragment>
 						{error !== "" &&
 							<pre>{error}</pre>
@@ -212,7 +218,7 @@ export default class EditPage extends React.Component<Props, State> {
 						}
 					</React.Fragment>
 				}
-				{data.id !== 0 &&
+				{data.model !== "" &&
 					<React.Fragment>
 						<Form
 							id="EditPageForm"

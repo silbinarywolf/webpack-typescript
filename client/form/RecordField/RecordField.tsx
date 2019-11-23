@@ -4,6 +4,7 @@ import { models } from "client/models";
 import { FormField } from "client/form/FormField/FormField";
 import { TextField } from "client/form/TextField/TextField";
 import { HiddenField } from "client/form/HiddenField/HiddenField";
+import { SelectField } from "client/form/SelectField/SelectField";
 
 interface State {
 }
@@ -87,6 +88,22 @@ export class RecordField extends React.Component<Props, State> {
 				}
 				renderedFields.push(
 					<TextField
+						key={name}
+						label={label}
+						name={name}
+						value={value}
+						disabled={disabled}
+						onChange={(value) => this.onChangeField(name, value)}
+					/>
+				);
+			break;
+
+			case "SelectField":
+				if (typeof value === 'object') {
+					throw new Error("Unexpected error on property \""+name+"\". Expected string or number not " + typeof value);
+				}
+				renderedFields.push(
+					<SelectField
 						key={name}
 						label={label}
 						name={name}

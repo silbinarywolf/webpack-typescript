@@ -132,7 +132,7 @@ func handleCors(w *http.ResponseWriter, req *http.Request) {
 
 func addFieldsFromDataModel(dataModel *schema.DataModel, fields *[]FormFieldModel) {
 	for _, field := range dataModel.Fields {
-		typeInfo, ok, _ := datatype.Get(field.Type)
+		typeInfo, ok, isPointer := datatype.Get(field.Type)
 		if !ok {
 			panic("Cannot get type from model. This should be impossible.")
 		}
@@ -141,11 +141,21 @@ func addFieldsFromDataModel(dataModel *schema.DataModel, fields *[]FormFieldMode
 			if formFieldModel != "RecordField" {
 				panic("Should not happen. Probably need to fix/adjust things")
 			}
-			field := FormFieldModel{
-				Type:  formFieldModel, // ie. "RecordField",
-				Name:  field.Name,
-				Label: field.Name,
-				Model: dataModel.Table,
+			var field FormFieldModel
+			if isPointer {
+				field = FormFieldModel{
+					Type:  "SelectField", // ie. "SelectField",
+					Name:  field.Name,
+					Label: field.Name,
+					Model: dataModel.Table,
+				}
+			} else {
+				field = FormFieldModel{
+					Type:  formFieldModel, // ie. "RecordField",
+					Name:  field.Name,
+					Label: field.Name,
+					Model: dataModel.Table,
+				}
 			}
 			addFieldsFromDataModel(dataModel, &field.Children)
 			*fields = append(*fields, field)
